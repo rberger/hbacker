@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+
+require "hbacker"
+require "hbacker/cli"
+
+Hbacker::CLI.start
