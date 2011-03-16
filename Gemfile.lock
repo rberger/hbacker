@@ -3,6 +3,7 @@ PATH
   specs:
     hbacker (0.0.1)
       fog (>= 0.6.0)
+      hbase-stargate
       thor
 
 GEM
@@ -33,6 +34,8 @@ GEM
     formatador (0.1.1)
     gherkin (2.3.3)
       json (~> 1.4.6)
+    hbase-stargate (1.5.5)
+      json
     json (1.4.6)
     mime-types (1.16)
     net-ssh (2.1.3)

@@ -16,7 +16,9 @@ module Hbacker
     ##
     # Queries HBase for the table's schema
     # 
-    def table
+    def table(table, start_time, end_time, versions, destination)
+      
+      
     end
   end
 end
