@@ -30,7 +30,7 @@ GEM
       net-ssh (>= 2.0.23)
       nokogiri (>= 1.4.4)
       ruby-hmac
-    formatador (0.0.16)
+    formatador (0.1.1)
     gherkin (2.3.3)
       json (~> 1.4.6)
     json (1.4.6)
