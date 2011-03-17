@@ -1,0 +1,17 @@
+h1. HBacker
+
+Ruby Tool to Backup / Restore HBase to S3, HDFS or local file system.
+
+*THIS IS UNDERCONSTRUCTION*
+
+See doc/Proposed_HBase_Backup_using_HBASE-1684.txt for the plan
+
+h2. Dependencies
+
+* hbase-stargate
+* hbase 0.20.3 - hbase 0.90.x
+* hadoop 0.20.2
+* AWS SimpleDB
+* fog
+
+h2. Copyright (c) 2011 Robert J. Berger and Runa, Inc.
