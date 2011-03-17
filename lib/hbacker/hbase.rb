@@ -1,14 +1,17 @@
 module Hbacker
+  require "stargate"
+  
   class HBase
-    attr_reader :hbase_home, :hadoop_home
+    attr_reader :hbase_home, :hadoop_home, :star_gate
     
-    def initialize(hbase_home, hadoop_home)
+    def initialize(master_host, master_port, hbase_home, hadoop_home)
       @hbase_home = hbase_home
       @hadoop_home = hadoop_home
+      @stargate = Stargate::Client.new("http://master_host:master_port")
     end
+    
+    def 
+    def 
   end
 end
 
-# ha = d.column_families.collect { |c| hsh = {}; c.instance_variables.collect { |i| k = i[1..-1].to_sym; v = c.instance_variable_get i; hsh.merge!(k => v)}; hsh}
-
-#client.create_table("rob_test_please_delete", *ha)
