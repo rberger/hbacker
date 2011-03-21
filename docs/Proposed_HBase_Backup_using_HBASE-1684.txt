@@ -31,8 +31,7 @@ do
 		$endtime
 
 	store_times_for_table_in_persistant_store( $table $starttime $endtime )
-	store_schema_for_table_in_persistant_store( $table
-get_schema_from_HBase($table) )
+	store_schema_for_table_in_persistant_store( $table, get_schema_from_HBase($table) )
 done
 
 Then do incremental backups from that point on:
@@ -52,8 +51,7 @@ do
 		$endtime
 
 	store_times_for_table_in_persistant_store( $table $starttime $endtime )
-	store_schema_for_table_in_persistant_store( $table
-get_schema_from_HBase($table) )
+	store_schema_for_table_in_persistant_store( $table, get_schema_from_HBase($table) )
 done
 
 The Import usage:
