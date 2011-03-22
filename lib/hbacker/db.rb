@@ -3,6 +3,7 @@ module Hbacker
   require "sdb/active_sdb"
   require "hbacker"
   require "hbacker/stargate"
+  require "pp"
   
   class TableInfo < RightAws::ActiveSdb::Base
     columns do
@@ -25,13 +26,14 @@ module Hbacker
   
   class Db 
     def initialize(aws_access_key_id, aws_secret_access_key, hbase_name)
-      # connect to SDB
-      RightAws::ActiveSdb.establish_connection(aws_access_key_id, aws_secret_access_key)
-      @table_name = "#{hbase_name}_table_info".camilize
+      table_name = "#{hbase_name}_table_info"
       
       # This seems to be the only way to dynmaically set the domain name
-      @table_class = Class.new(TableInfo) { set_domain_name @table_name}
+      @table_class = Class.new(TableInfo) { set_domain_name table_name}
       
+      # connect to SDB
+      RightAws::ActiveSdb.establish_connection(aws_access_key_id, aws_secret_access_key, :logger => Hbacker.log)
+
       # Creating a domain is idempotent. Its easier to try to create than to check if it already exists
       @table_class.create_domain
     end

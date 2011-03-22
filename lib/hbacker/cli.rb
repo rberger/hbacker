@@ -11,40 +11,46 @@ module Hbacker
     ##
     # Use (Now - 60 seconds) * 1000 to have a timestamp from 60 seconds ago in milliseconds
     #
-    now_minus_60_sec = (Time.now.to_i - 60) * 1000
+    backup_start = Time.now
+    now_minus_60_sec = (backup_start.to_i - 60) * 1000
+    backup_timestamp = backup_start.strftime("%Y%m%d_%H%M%S")
 
     desc "export", "Export HBase table[s]."
-    method_options :incremental => false, :aliases => "-i", 
-      :banner => "Do an incremental export. Use stored last backup. Ignores --start"
-    method_options :all => false, :aliases => "-a", 
-      :banner => "All tables in HBase"
-    method_options :tables => [], :aliases => "-t", 
-      :banner => "Space separated list of tables"
-    method_options :destination => "s3n://runa-hbase-staging/", :aliases => "-d", :required => true,
-      :banner  => "Destination S3 bucket, S3n path, HDFS or File"
-    method_options :start => 0, :aliases => "-s", 
-      :banner => "Start time (millisecs since Unix Epoch) Default: Shortly after Man first walked on Moon"
-    method_options :end => now_minus_60_sec, :aliases => "-s", 
-      :banner => "End time (millisecs since Unix Epoch) Default: Now - 60sec"
-    method_options :debug => false, :aliases => "-d", 
-      :banner => "Enable debug messages"
-    method_options :hbase_host => "hbase_master0-staging.runa.com", :aliases => "-H",
-      :banner => "Host name of the host running the hbase-stargate server"
-    method_options :hbase_port => 8080, :aliases => "-P",
-      :banner => "TCP Port of the hbase-stargate server"
-    method_options :hbase_version => "0.20.3", :aliases => "-V",
-      :banne => "Version of HBase of the source HBase"
-    method_options :aws_config => "~/.aws/aws_config.yml", :aliases => "-c",
-      :banner => "Yaml file with aws credentials and other config"
-    method_options :hadoop_home => "/mnt/hadoop", 
-      :banner => "Local Unix file system path to where the Hadoop Home (at least for Hadoop client config/jar)"
-    method_options :hbase_home => "/mnt/hbase",
-      :banner => "Local Unix file system path to where the HBase Home (at least for HBase client config/jar)"
+    method_option :incremental, :type => :boolean, :default => false, :aliases => "-i", 
+      :desc => "Do an incremental export. Use stored last backup. Ignores --start"
+    method_option :all, :type => :boolean, :default => false, :aliases => "-a", 
+      :desc => "All tables in HBase"
+    method_option :tables, :type => :array, :aliases => "-t", 
+      :desc => "Space separated list of tables"
+    method_option :destination, :type => :string, :default => "s3n://runa-hbase-staging/", :aliases => "-d", :required => true,
+      :desc  => "Destination S3 bucket, S3n path, HDFS or File"
+    method_option :backup_timestamp, :default => backup_timestamp,
+      :desc => "Will be the top level folder in the destination directory specified by -destination"
+    method_option :start, :default => 0, :aliases => "-s", 
+      :desc => "Start time (millisecs since Unix Epoch)"
+    method_option :end, :default => now_minus_60_sec, :aliases => "-s", 
+      :desc => "End time (millisecs since Unix Epoch)"
+    method_option :debug, :type => :boolean, :default => false, :aliases => "-d", 
+      :desc => "Enable debug messages"
+    method_option :hbase_host, :type => :string, :default => "hbase-master0-staging.runa.com", :aliases => "-H",
+      :desc => "Host name of the host running the hbase-stargate server"
+    method_option :hbase_port, :type => :string, :default => 8080, :aliases => "-P",
+      :desc => "TCP Port of the hbase-stargate server"
+    method_option :hbase_version, :type => :string, :default => "0.20.3", :aliases => "-V",
+      :desc => "Version of HBase of the source HBase"
+    method_option :aws_config, :type => :string, :default => "~/.aws/aws_config.yml", :aliases => "-c",
+      :desc => "Yaml file with aws credentials and other config"
+    method_option :hadoop_home, :type => :string, :default => "/mnt/hadoop", 
+      :desc => "Local Unix file system path to where the Hadoop Home (at least for Hadoop client config/jar)"
+    method_option :hbase_home, :type => :string, :default => "/mnt/hbase",
+      :desc => "Local Unix file system path to where the HBase Home (at least for HBase client config/jar)"
+    method_option :versions, :default => 100000,
+      :desc => "Number of versions of rows to back up per file"
     def export
       if options[:debug]
-        HBacker.log.level = Logger::DEBUG
+        Hbacker.log.level = Logger::DEBUG
       else
-        HBacker.log.level = Logger::WARN
+        Hbacker.log.level = Logger::INFO
       end
       
       Hbacker.log.debug "options: #{options.inspect}"
@@ -68,18 +74,20 @@ module Hbacker
       end
     end
 
-    def setup(options)
-      config = YAML.load_file(File.join(ENV['HOME'], options[:aws_config]))
-      hbase_name = options[:hbase_host].gsub(/[-\.]/, "_")
-      Hbacker.log.debug "Hbacker::Db.new(#{config['access_key_id']}, #{config['secret_access_key']}, #{hbase_name})"
-      db = Hbacker::Db.new(config['access_key_id'], config['secret_access_key'], hbase_name)
+    no_tasks do
+      def setup(options)
+        config = YAML.load_file(File.expand_path(options[:aws_config]))
+        hbase_name = options[:hbase_host].gsub(/[-\.]/, "_")
+        Hbacker.log.debug "Hbacker::Db.new(#{config['access_key_id']}, #{config['secret_access_key']}, #{hbase_name})"
+        db = Hbacker::Db.new(config['access_key_id'], config['secret_access_key'], hbase_name)
       
-      Hbacker.log.debug "Hbacker::Hbase.new(#{options[:hbase_home]}, #{options[:hadoop_home]}, #{options[:hbase_host]}, #{options[:hbase_port]})"
-      hbase = Hbacker::Hbase.new(options[:hbase_home], options[:hadoop_home], options[:hbase_host], options[:hbase_port])
+        Hbacker.log.debug "Hbacker::Hbase.new(#{options[:hbase_home]}, #{options[:hadoop_home]}, #{options[:hbase_host]}, #{options[:hbase_port]})"
+        hbase = Hbacker::Hbase.new(options[:hbase_home], options[:hadoop_home], options[:hbase_host], options[:hbase_port])
       
-      Hbacker.log.debug "export = Export.new(#{hbase}, #{db}, #{options[:hbase_home]}, #{options[:hbase_version]})"
-      export = Export.new(hbase, db, options[:hbase_home], options[:hbase_version])
-      config.merge({:hbase => hbase, :db => db, :hbase_name => hbase_name})
+        Hbacker.log.debug "export = Export.new(#{hbase}, #{db}, #{options[:hbase_home]}, #{options[:hbase_version]}, #{options[:hadoop_home]})"
+        export = Export.new(hbase, db, options[:hbase_home], options[:hbase_version], options[:hadoop_home])
+        config.merge({:hbase => hbase, :db => db, :hbase_name => hbase_name, :export => export})
+      end
     end
   end
 end

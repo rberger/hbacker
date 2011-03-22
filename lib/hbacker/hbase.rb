@@ -11,6 +11,7 @@ module Hbacker
       @master_port = master_port
       @master_port_string = master_port.nil? ? "" : ":#{master_port}" 
 
+      Hbacker.log.debug " @stargate = Stargate::Client.new(\"http://#{@master_host}#{@master_port_string}\")"
       @stargate = Stargate::Client.new("http://#{@master_host}#{@master_port_string}")
     end
     
@@ -18,6 +19,10 @@ module Hbacker
     # Get the Stargate::Model::TableDescriptor of the specified table from HBase
     def table_descriptor(table_name)
       @stargate.show_table(table_name)
+    end
+    
+    def list_tables
+      @stargate.list_tables
     end
   end
 end

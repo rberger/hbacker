@@ -19,25 +19,24 @@ module Hbacker
     # Iterates thru the list calling Export#table to do the Export to the specified dest
     #
     def all_tables(opts)
-      puts "all_tables"
-      puts "@db: #{@db.inspect}"
-      puts "@hbase: #{@hbase.inspect}"
-      puts "@hbase_home: #{@hbase_home}"
-      puts "@hbase_version: #{@hbase_version}"
-      puts "@hadoop_home: #{@hadoop_home}"
-      pp opts
+      Hbacker.log.debug "Export#all_tables"
+      @hbase.list_tables.each do |table|
+        dest = "#{opts[:destination]}#{opts[:backup_timestamp]}/"
+        Hbacker.log.info "Backing up #{ table.name} to #{dest}"
+        Hbacker.log.debug "self.table(#{table.name},#{ opts[:start]}, #{opts[:end]}, #{dest}, #{opts[:versions]})"
+        self.table(table.name, opts[:start], opts[:end], dest, opts[:versions])
+      end
     end
     
     ##
     # Iterates thru the list of tables calling Export#table to do the Export to the specified dest
     def specified_tables(opts)
-      puts "specified_tables"
-      puts "@db: #{@db.inspect}"
-      puts "@hbase: #{@hbase.inspect}"
-      puts "@hbase_home: #{@hbase_home}"
-      puts "@hbase_version: #{@hbase_version}"
-      puts "@hadoop_home: #{@hadoop_home}"
-      pp opts
+      opts[:tables].each do |table|
+        dest = "#{opts[:destination]}#{opts[:backup_timestamp]}"
+        Hbacker.log.info "Backing up#{ table.name} to #{dest}"
+        Hbacker.log.debug "self.table(#{table.name},#{ opts[:start]}, #{opts[:end]}, #{dest}, #{opts[versions]})"
+        self.table(table.name, opts[:start], opts[:end], dest, opts[versions])
+      end
     end
     
     ##
