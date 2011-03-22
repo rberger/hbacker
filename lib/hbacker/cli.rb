@@ -1,4 +1,5 @@
 require 'logger'
+require "yaml"
 require 'thor'
 require 'hbacker/export'
 # require 'hbacker/import'
@@ -53,7 +54,6 @@ module Hbacker
         Hbacker.log.level = Logger::INFO
       end
       
-      Hbacker.log.debug "options: #{options.inspect}"
       if options[:all] && options[:tables]
         puts "Can only choose one of --all or --tables"
         help
@@ -78,13 +78,8 @@ module Hbacker
       def setup(options)
         config = YAML.load_file(File.expand_path(options[:aws_config]))
         hbase_name = options[:hbase_host].gsub(/[-\.]/, "_")
-        Hbacker.log.debug "Hbacker::Db.new(#{config['access_key_id']}, #{config['secret_access_key']}, #{hbase_name})"
         db = Hbacker::Db.new(config['access_key_id'], config['secret_access_key'], hbase_name)
-      
-        Hbacker.log.debug "Hbacker::Hbase.new(#{options[:hbase_home]}, #{options[:hadoop_home]}, #{options[:hbase_host]}, #{options[:hbase_port]})"
         hbase = Hbacker::Hbase.new(options[:hbase_home], options[:hadoop_home], options[:hbase_host], options[:hbase_port])
-      
-        Hbacker.log.debug "export = Export.new(#{hbase}, #{db}, #{options[:hbase_home]}, #{options[:hbase_version]}, #{options[:hadoop_home]})"
         export = Export.new(hbase, db, options[:hbase_home], options[:hbase_version], options[:hadoop_home])
         config.merge({:hbase => hbase, :db => db, :hbase_name => hbase_name, :export => export})
       end

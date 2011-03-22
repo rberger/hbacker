@@ -21,8 +21,8 @@ module Hbacker
     def all_tables(opts)
       Hbacker.log.debug "Export#all_tables"
       @hbase.list_tables.each do |table|
-        dest = "#{opts[:destination]}#{opts[:backup_timestamp]}/"
-        Hbacker.log.info "Backing up #{ table.name} to #{dest}"
+        dest = "#{opts[:destination]}#{opts[:backup_timestamp]}/#{table.name}/"
+        Hbacker.log.info "Backing up #{table.name} to #{dest}"
         Hbacker.log.debug "self.table(#{table.name},#{ opts[:start]}, #{opts[:end]}, #{dest}, #{opts[:versions]})"
         self.table(table.name, opts[:start], opts[:end], dest, opts[:versions])
       end
@@ -32,10 +32,10 @@ module Hbacker
     # Iterates thru the list of tables calling Export#table to do the Export to the specified dest
     def specified_tables(opts)
       opts[:tables].each do |table|
-        dest = "#{opts[:destination]}#{opts[:backup_timestamp]}"
-        Hbacker.log.info "Backing up#{ table.name} to #{dest}"
-        Hbacker.log.debug "self.table(#{table.name},#{ opts[:start]}, #{opts[:end]}, #{dest}, #{opts[versions]})"
-        self.table(table.name, opts[:start], opts[:end], dest, opts[versions])
+        dest = "#{opts[:destination]}#{opts[:backup_timestamp]}/#{table}/"
+        Hbacker.log.info "Backing up #{table} to #{dest}"
+        Hbacker.log.debug "self.table(#{table},#{ opts[:start]}, #{opts[:end]}, #{dest}, #{opts[:versions]})"
+        self.table(table, opts[:start], opts[:end], dest, opts[:versions])
       end
     end
     
@@ -50,7 +50,7 @@ module Hbacker
         "#{table_name} #{destination} #{versions} #{start_time} #{end_time}"
       Hbacker.log.debug "About to execute #{cmd}"
       cmd_output = `#{cmd} 2>&1`
-      Hbacker.log.debug "cmd output: #{cmd_output}"
+      # Hbacker.log.debug "cmd output: #{cmd_output}"
       
       Hbacker.log.debug "$?.exitstatus: #{$?.exitstatus.inspect}"
       
