@@ -1,28 +1,32 @@
+
+I've been using the RightAws::ActiveSdb http://rubygems.org/gems/right_aws for accessing SimpleDB and hbase-stargate https://github.com/greglu/hbase-stargate for accessing HBase from ruby
+
+
+Here's what I sent to the HBase list/IRC:
+
+------------------
+
 I'm in the midst of trying to wrangle an HBase backup/restore to/from S3 or HDFS
-built around export/backup of 1 table at a time
-using org.apache.hadoop.hbase.mapreduce.Export from HBASE-1684.
+built around export/backup of 1 table at a time using org.apache.hadoop.hbase.mapreduce.Export from HBASE-1684.
 
 Just a reminder:
 Usage: Export <tablename> <outputdir> [<versions> [<starttime> [<endtime>]]]
 
 In the psuedo code below: 
 
-persistant_store is some kind of non-HBase store in the Cloud that you can just
-push stuff onto.
-all_my_Hbase_tables_to_be_backedup is a list of table names
-create_table is a function that would properly create a new HBase Table based on
-the schema passed in as an argument
+persistant_store is some kind of non-HBase store in the Cloud that you can just push stuff onto (AWS SimpleDB).
+all_my_Hbase_tables_to_be_backedup is a list of table names to back up
+create_table is a function that would properly create a new HBase Table based on the schema passed in as an argument
 
-Can I assume that if I do the following (psuedo_code) on HBase 0.20.3 or 0.90.x
-to get an initial full backup to S3:
+Do the following (psuedo_code) on HBase 0.20.3 or 0.90.x to get an initial full backup to S3:
 
 starttime = begining_of_time
 endtime = NOW_Minus_60_seconds
-versions = 100000 (the largest number of versions we keep, we do some weird
-things with versions in some tables)
 
 for table in all_my_Hbase_tables_to_be_backedup
 do
+	schema = get_schema_from_HBase($table)
+	versions = get_largest_versions(schema)
 	$HADOOP_HOME/bin/hadoop jar $HBASE_HOME/hbase-0.20.3.jar export \
 		$table \
 		s3n://somebucket/$table/ \
@@ -30,18 +34,18 @@ do
 		$starttime \
 		$endtime
 
-	store_times_for_table_in_persistant_store( $table $starttime $endtime )
-	store_schema_for_table_in_persistant_store( $table, get_schema_from_HBase($table) )
+	store_info_about_table_in_persistant_store( $table $starttime $endtime, schema )
 done
 
 Then do incremental backups from that point on:
 
 endtime = NOW_Minus_60_seconds
-versions = 100000
 
 for table in all_my_Hbase_tables_to_be_backedup
 do
 	starttime = get_last_endtime_from_persistant_store( $table )
+	schema = get_schema_from_HBase($table)
+	versions = get_largest_versions(schema)
 
 	$HADOOP_HOME/bin/hadoop jar $HBASE_HOME/hbase-0.20.3.jar export \
 		$table \
@@ -50,8 +54,7 @@ do
 		$starttime \
 		$endtime
 
-	store_times_for_table_in_persistant_store( $table $starttime $endtime )
-	store_schema_for_table_in_persistant_store( $table, get_schema_from_HBase($table) )
+  	store_info_about_table_in_persistant_store( $table $starttime $endtime, schema) )
 done
 
 The Import usage:
@@ -62,37 +65,36 @@ If I wanted to restore a backed up table (table_foo) to a destination table
 the same HBase the table was originally backed up from from the exports to S3 I
 can do:
 
-create_table( get_schema_from_persistant_store(table_bar) )
+create_table( get_schema_from_persistant_store($table_bar, $end_time) )
 
 $HADOOP_HOME/bin/hadoop jar $HBASE_HOME/hbase-0.20.3.jar import \
-	table_bar \
-	s3n://somebucket/table_foo/
+	$table_bar \
+	s3n://somebucket/$table_foo/
 
 If I wanted to do a full restore I would just loop thru all the tables  the
-above import process on an HBase cluster that didn't yet have those tables.
+above import process on an HBase cluster that didn't yet have those tables:
+
+tables = get_all_table_names_from_persistant_store($end_time)
+
+for table in tables
+do
+	create_table( get_schema_from_persistant_store($table, $end_time) )
+
+    $HADOOP_HOME/bin/hadoop jar $HBASE_HOME/hbase-0.20.3.jar import \
+	$table \
+	s3n://somebucket/$table/
+
 
 Would I pretty much be guaranteed to get a proper backup snapshotted at the
 specified endtime of each run? 
 
-Could this be used to copy an the data from one HBase cluster to another (in
-particular to go from a production HBase 0.20.3 to a fresh new 0.90.1)?
+This should work to copy an the data from one HBase cluster to another (in
+particular to go from a production HBase 0.20.3 to a fresh new 0.90.1)
 
 One normal backup/restore  thing that is missing is there is no easy way to get
 a restore at a point in time as opposed to the last backup. I presume the worse
 case would be to restore everything and then delete rows with timestamps after
 the early date one wanted?
 
-Please let me know what I might be missing or what the down sides would be to
-such a way to do backups.
+[One thing the full or incremental backup won't easily  handle is if tables or rows are deleted]
 
-Thanks!
-Rob
-
-__________________
-Robert J Berger - CTO
-Runa Inc.	
-520 San Antonio Rd Suite 210, Mountain View, CA 94040
-+1 408-838-8896
-http://blog.ibd.com
-
-http://workatruna.com

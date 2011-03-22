@@ -3,7 +3,6 @@ require File.join(File.dirname(__FILE__), "..", "spec_helper")
 require "hbacker"
 require "hbacker/hbase"
 require "stargate"
-require "fog"
 
 describe Hbacker::Hbase, "initialize" do
   before :each do

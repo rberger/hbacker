@@ -22,6 +22,6 @@ Gem::Specification.new do |s|
   s.add_development_dependency "cucumber"
   s.add_development_dependency "aruba"
   s.add_dependency "thor"
-  s.add_dependency "fog", ">= 0.6.0"
   s.add_dependency "hbase-stargate"
+  s.add_dependency "right_aws", ">= 2.0.0"
 end

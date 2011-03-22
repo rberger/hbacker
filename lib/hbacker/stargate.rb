@@ -6,7 +6,7 @@ module Stargate
       ##
       # Convert Stargate::Model::TableDescriptor#column_families into an array of hashes
       #
-      def column_families_to_hash
+      def column_families_to_hashes
         self.column_families.collect do |c| 
           hsh = {}
           c.instance_variables.collect do |i| 
@@ -32,7 +32,7 @@ module Stargate
       def create_table_from_table_descriptor(table_descriptor, table_name=nil)
         table_name = table_descriptor.name unless table_name
         
-        column_family_hashes = table_descriptor.column_families_to_hash
+        column_family_hashes = table_descriptor.column_families_to_hashes
         
         self.create_table(table_name, *column_family_hashes)
       end

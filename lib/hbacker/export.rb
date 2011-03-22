@@ -26,24 +26,26 @@ module Hbacker
     end
     
     ##
-    # Queries HBase for the table's schema
+    # * Uses Hadoop to export specfied table from HBase to destination file system
+    # * Record that the date range and schema of table was exported to
     # 
-    def table(table, start_time, end_time, versions, destination)
-      cmd = "#{@hadoop_home}/bin/hadoop jar #{hbase_home}/hbase-#{@hbase_version}.jar export " +
-        "#{table} #{destination} #{versions} #{start_time} #{end_time}"
-      STDERR.puts "About to execute #{cmd}"
-      cmd_output = %x[#{cmd} 2>&1]
-      STDERR.puts "cmd output: #{cmd_output}"
+    def table(table_name, start_time, end_time, destination, versions)
+      table_descriptor = @hbase.table_descriptor(table_name)
       
-      STDERR.puts "$?.exitstatus: #{$?.exitstatus.inspect}"
+      cmd = "#{@hadoop_home}/bin/hadoop jar #{hbase_home}/hbase-#{@hbase_version}.jar export " +
+        "#{table_name} #{destination} #{versions} #{start_time} #{end_time}"
+      @log.debug "About to execute #{cmd}"
+      cmd_output = %x[#{cmd} 2>&1]
+      @log.debug "cmd output: #{cmd_output}"
+      
+      @log.debug "$?.exitstatus: #{$?.exitstatus.inspect}"
       
       if $?.exitstatus > 0
-        STDERR.puts"Hadoop command failed:"
-        STDERR.puts cmd_output
+        @log.error"Hadoop command failed:"
+        @log.error cmd_output
         exit(-1)
       end
-      schema = @hbase.schema(table)
-      @db.record_table_info(table, start_time, end_time, versions, schema)
+      @db.record_table_info(table_name, start_time, end_time, table_descriptor, versions)
     end
   end
 end

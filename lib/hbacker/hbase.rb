@@ -10,10 +10,14 @@ module Hbacker
       @master_host = master_host
       @master_port = master_port
       @master_port_string = master_port.nil? ? "" : ":#{master_port}" 
-      puts "hbase_home: #{hbase_home.inspect} hadoop_home: #{hadoop_home.inspect} master_host: #{master_host.inspect} master_port: #{master_port.inspect}"
-      puts "http://#{@master_host}#{@master_port_string}"
+
       @stargate = Stargate::Client.new("http://#{@master_host}#{@master_port_string}")
-      puts "@stargate: #{@stargate.inspect}"
+    end
+    
+    ##
+    # Get the Stargate::Model::TableDescriptor of the specified table from HBase
+    def table_descriptor(table_name)
+      @stargate.show_table(table_name)
     end
   end
 end

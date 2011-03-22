@@ -2,7 +2,7 @@ require File.join(File.dirname(__FILE__), "..", "..", "spec_helper")
 require 'hbacker/stargate'
 require 'stargate'
 
-describe Stargate::Model, "#column_families_to_hash" do
+describe Stargate::Model, "#column_families_to_hashes" do
   before :all do
     @column_families = []
     @column_descriptor_0 = Stargate::Model::ColumnDescriptor.new(:name => 'hobbit',
@@ -33,12 +33,12 @@ describe Stargate::Model, "#column_families_to_hash" do
   end
     
   it "should have two column_families" do
-    @table_descriptor.column_families_to_hash.count.should == 2
+    @table_descriptor.column_families_to_hashes.count.should == 2
   end
   
   it "should be accessible as an array of hashes" do
-    @table_descriptor.column_families_to_hash.first[:name].should == 'hobbit'
-    @table_descriptor.column_families_to_hash[1][:name].should == 'sauron'
+    @table_descriptor.column_families_to_hashes.first[:name].should == 'hobbit'
+    @table_descriptor.column_families_to_hashes[1][:name].should == 'sauron'
   end
 end
 
