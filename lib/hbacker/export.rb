@@ -1,10 +1,10 @@
 module Hbacker
+  require "hbacker"
   class Export
-    require "hbacker"
     ##
     # Initialize the Export Instance
     #
-    def initialize(hbase, db, hadoop_hom, hbase_homee, hbase_version)
+    def initialize(hbase, db, hadoop_home, hbase_home, hbase_version)
       @hbase = hbase
       @db = db
       @hadoop_home = hadoop_home
@@ -32,17 +32,17 @@ module Hbacker
     def table(table_name, start_time, end_time, destination, versions)
       table_descriptor = @hbase.table_descriptor(table_name)
       
-      cmd = "#{@hadoop_home}/bin/hadoop jar #{hbase_home}/hbase-#{@hbase_version}.jar export " +
+      cmd = "#{@hadoop_home}/bin/hadoop jar #{@hbase_home}/hbase-#{@hbase_version}.jar export " +
         "#{table_name} #{destination} #{versions} #{start_time} #{end_time}"
-      @log.debug "About to execute #{cmd}"
-      cmd_output = %x[#{cmd} 2>&1]
-      @log.debug "cmd output: #{cmd_output}"
+      Hbacker.log.debug "About to execute #{cmd}"
+      cmd_output = `#{cmd} 2>&1`
+      Hbacker.log.debug "cmd output: #{cmd_output}"
       
-      @log.debug "$?.exitstatus: #{$?.exitstatus.inspect}"
+      Hbacker.log.debug "$?.exitstatus: #{$?.exitstatus.inspect}"
       
       if $?.exitstatus > 0
-        @log.error"Hadoop command failed:"
-        @log.error cmd_output
+        Hbacker.log.error"Hadoop command failed:"
+        Hbacker.log.error cmd_output
         exit(-1)
       end
       @db.record_table_info(table_name, start_time, end_time, table_descriptor, versions)

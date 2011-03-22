@@ -5,6 +5,7 @@ PATH
       hbase-stargate
       right_aws (>= 2.0.0)
       thor
+      uuidtools
 
 GEM
   remote: http://rubygems.org/
@@ -39,6 +40,7 @@ GEM
     rspec-mocks (2.5.0)
     term-ansicolor (1.0.5)
     thor (0.14.6)
+    uuidtools (2.1.2)
 
 PLATFORMS
   ruby

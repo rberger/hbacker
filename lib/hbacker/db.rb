@@ -38,7 +38,8 @@ module Hbacker
     
     def record_table_info(table_name, start_time, end_time, versions, table_descriptor)
       table_descriptor.column_families_to_hashes.each do |column|
-        @table_class.create(column.merge({:table_name => table_name, :start_time => start_time, :end_time,}))
+        @table_class.create(column.merge({:table_name => table_name, :start_time => start_time, :end_time => end_time}))
+      end
     end
   end
 end
