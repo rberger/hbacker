@@ -25,6 +25,12 @@ module Hbacker
   end
   
   class Db 
+    # Initializes SimpleDB Table and connection
+    # @param [String] aws_access_key_id Amazon Access Key ID
+    # @param [String] aws_secret_access_key Amazon Secret Access Key
+    # @param [String] hbase_name Name to refer to the HBase cluster by
+    #   Usually the FQDN with dots turned to underscores
+    #
     def initialize(aws_access_key_id, aws_secret_access_key, hbase_name)
       table_name = "#{hbase_name}_table_info"
       
@@ -38,6 +44,13 @@ module Hbacker
       @table_class.create_domain
     end
     
+    # Records HBase Table Info into SimpleDB table
+    # @param [String] table_name Name of the HBase Table
+    # @param [Integer] start_time Earliest Time to backup from (milliseconds since Unix Epoch)
+    # @param [Integer] end_time Latest Time to backup to (milliseconds since Unix Epoch)
+    # @param [Stargate::Model::TableDescriptor] table_descriptor Schema of the HBase Table
+    # @param [Integer] versions Max number of row/cell versions to backup
+    #
     def record_table_info(table_name, start_time, end_time, table_descriptor, versions)
       table_descriptor.column_families_to_hashes.each do |column|
         @table_class.create(column.merge({:table_name => table_name, :start_time => start_time, :end_time => end_time}))

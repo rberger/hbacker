@@ -6,12 +6,13 @@ module Hbacker
     ##
     # Initialize the Import Instance
     #
-    def initialize(hbase, db, hbase_home, hbase_version, hadoop_home)
+    def initialize(hbase, db, hbase_home, hbase_version, hadoop_home, s3)
       @hbase = hbase
       @db = db
       @hadoop_home = hadoop_home
       @hbase_home = hbase_home
       @hbase_version = hbase_version
+      @s3 = s3
     end
 
     ##

@@ -7,6 +7,7 @@ module Hbacker
   #
   require "logger"
   class << self
+    # Way to access the Logger
     attr_accessor :log
   end
 

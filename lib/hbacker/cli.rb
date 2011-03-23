@@ -73,7 +73,8 @@ module Hbacker
     desc "import", "Import HBase table[s]."
     long_desc "Import HBase tables from a specified source. " +
       "--source_dir must be specified as it shows what type file system and bucket/path to table data. " +
-      "If there are no --tables or --pattern specified, it will assume everything in contained in --source_dir is a directory representing a table"
+      "If there are no --tables or --pattern specified, it will assume everything in " +
+      "contained in --source_dir is a directory representing a table"
     method_option :source_dir, :type => :string, :default => "s3n://runa-hbase-staging/", :aliases => "-S", :required => true,
       :desc  => "Source scheme://path", :banner => "s3 | s3n | hdfs | file"
     method_option :backup_session, :type => :string, :desc => "Timestamp associated with the backup session", :banner => "20110322_091701"
@@ -97,23 +98,27 @@ module Hbacker
 
     no_tasks do
       ##
-      # applies the array of option hashes to the specified task
-      # Useful for shared options
+      # Initializes all the objects needed by the main tasks
+      # Uses options and/or configuration files
       #
-      def shared_method_options(task, option_hashes)
-        option_hashes.each do |option|
-          method_option 
-        end
-      end
-      
       def setup(task, options)
         config = YAML.load_file(File.expand_path(options[:aws_config]))
         hbase_name = options[:hbase_host].gsub(/[-\.]/, "_")
         db = Hbacker::Db.new(config['access_key_id'], config['secret_access_key'], hbase_name)
         hbase = Hbacker::Hbase.new(options[:hbase_home], options[:hadoop_home], options[:hbase_host], options[:hbase_port])
         
-        export = Export.new(hbase, db, options[:hbase_home], options[:hbase_version], options[:hadoop_home])
-        config.merge({:hbase => hbase, :db => db, :hbase_name => hbase_name, :export => export})
+        case task
+        when :export
+          export = Export.new(hbase, db, options[:hbase_home], options[:hbase_version], options[:hadoop_home])
+          config.merge({:hbase => hbase, :db => db, :hbase_name => hbase_name, :export => export})
+        when :import
+          s3 = Hbacker::S3.new(config['access_key_id'], config['secret_access_key'])
+          import = Import.new(hbase, db, options[:hbase_home], options[:hbase_version], options[:hadoop_home], s3)
+          config.merge({:hbase => hbase, :db => db, :hbase_name => hbase_name, :import => import})
+        else
+          Hbacker.log.error "Invalid task in CLI#setup: #{task}"
+          exit(-1)
+        end
       end
     end
   end
