@@ -12,7 +12,9 @@ h2. Dependencies
 * hbase 0.20.3 - hbase 0.90.x
 * hadoop 0.20.2
 * AWS SimpleDB
-* fog
+* right_aws
+* yard
+* bundler
 
 h2. Copyright
 
