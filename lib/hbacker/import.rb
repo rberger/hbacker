@@ -2,9 +2,9 @@ module Hbacker
   require "hbacker"
   require "pp"
   
-  class Export
+  class Import
     ##
-    # Initialize the Export Instance
+    # Initialize the Import Instance
     #
     def initialize(hbase, db, hbase_home, hbase_version, hadoop_home)
       @hbase = hbase
@@ -16,12 +16,10 @@ module Hbacker
 
     ##
     # Querys HBase to get a list of all the tables in the cluser
-    # Iterates thru the list calling Export#table to do the Export to the specified dest
-    #
-    # TODO: Record a backup session with the backup_timestamp as the key
+    # Iterates thru the list calling Import#table to do the Import to the specified dest
     #
     def all_tables(opts)
-      Hbacker.log.debug "Export#all_tables"
+      Hbacker.log.debug "Import#all_tables from #opts[:source] to #{@hbase_home}"
       @hbase.list_tables.each do |table|
         dest = "#{opts[:destination]}#{opts[:backup_timestamp]}/#{table.name}/"
         Hbacker.log.info "Backing up #{table.name} to #{dest}"
@@ -31,10 +29,8 @@ module Hbacker
     end
     
     ##
-    # Iterates thru the list of tables calling Export#table to do the Export to the specified dest
-    #
-    # TODO: Record a backup session with the backup_timestamp as the key
-    #
+    # Iterates thru the list of tables calling Import#table to do the Import to the specified dest
+    # * Get the list of names based on the 
     def specified_tables(opts)
       opts[:tables].each do |table|
         dest = "#{opts[:destination]}#{opts[:backup_timestamp]}/#{table}/"
@@ -45,14 +41,15 @@ module Hbacker
     end
     
     ##
-    # * Uses Hadoop to export specfied table from HBase to destination file system
-    # * Record that the date range and schema of table was exported to
+    # * Uses Hadoop to import specfied table from HBase to destination file system
+    # * Record that the date range and schema of table was imported to
     # 
-    # TODO: Record the backup session backup_timestamp in the db
+    # TODO: Don't import .META. table!
+    #
     def table(table_name, start_time, end_time, destination, versions)
       table_descriptor = @hbase.table_descriptor(table_name)
       
-      cmd = "#{@hadoop_home}/bin/hadoop jar #{@hbase_home}/hbase-#{@hbase_version}.jar export " +
+      cmd = "#{@hadoop_home}/bin/hadoop jar #{@hbase_home}/hbase-#{@hbase_version}.jar import " +
         "#{table_name} #{destination} #{versions} #{start_time} #{end_time}"
       Hbacker.log.debug "About to execute #{cmd}"
       cmd_output = `#{cmd} 2>&1`
