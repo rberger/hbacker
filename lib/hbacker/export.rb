@@ -21,11 +21,12 @@ module Hbacker
     # 
     def all_tables(opts)
       Hbacker.log.debug "Export#all_tables"
+      @db.record_backup_start(opts[:backup_name], opts[:dest_root], opts[:start], Time.now)
       @hbase.list_tables.each do |table|
-        dest = "#{opts[:dest_root]}#{opts[:backup_timestamp]}/#{table.name}/"
+        dest = "#{opts[:dest_root]}#{opts[:backup_name]}/#{table.name}/"
         Hbacker.log.info "Backing up #{table.name} to #{dest}"
         Hbacker.log.debug "self.table(#{table.name},#{ opts[:start]}, #{opts[:end]}, #{dest}, #{opts[:versions]})"
-        self.table(table.name, opts[:start], opts[:end], dest, opts[:versions], opts[:backup_timestamp])
+        self.table(table.name, opts[:start], opts[:end], dest, opts[:versions], opts[:backup_name])
       end
     end
     
@@ -34,11 +35,13 @@ module Hbacker
     # @param [Hash] opts Hash from the CLI with all the options set
     #
     def specified_tables(opts)
+      Hbacker.log.debug "Export#specified_tables"
+      @db.record_backup_start(opts[:backup_name], opts[:dest_root], Time.now)
       opts[:tables].each do |table|
-        dest = "#{opts[:dest_root]}#{opts[:backup_timestamp]}/#{table}/"
+        dest = "#{opts[:dest_root]}#{opts[:backup_name]}/#{table}/"
         Hbacker.log.info "Backing up #{table} to #{dest}"
         Hbacker.log.debug "self.table(#{table},#{ opts[:start]}, #{opts[:end]}, #{dest}, #{opts[:versions]})"
-        self.table(table, opts[:start], opts[:end], dest, opts[:versions], opts[:backup_timestamp])
+        self.table(table, opts[:start], opts[:end], dest, opts[:versions], opts[:backup_name])
       end
     end
     
@@ -50,10 +53,10 @@ module Hbacker
     # @param [Integer] end_time Latest Time to backup to (milliseconds since Unix Epoch)
     # @param [String] destination Full scheme://path for destination. Suitable for use with HBase/HDFS
     # @param [Integer] versions Number of versions to backup
-    # TODO: Record the backup session backup_timestamp in the db
-    # TODO: Check if table is empty, if so don't do hadoop job, just create the target directory and record in Db
+    # @todo Check if table is empty, if so don't do hadoop job, just create the target directory and record in Db
+    # @todo Make sure table is compacted before backup
     #
-    def table(table_name, start_time, end_time, destination, versions, backup_timestamp)
+    def table(table_name, start_time, end_time, destination, versions, backup_name)
       table_descriptor = @hbase.table_descriptor(table_name)
       
       cmd = "#{@hadoop_home}/bin/hadoop jar #{@hbase_home}/hbase-#{@hbase_version}.jar export " +
@@ -69,7 +72,7 @@ module Hbacker
         Hbacker.log.error cmd_output
         exit(-1)
       end
-      @db.record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_timestamp)
+      @db.record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name)
     end
   end
 end

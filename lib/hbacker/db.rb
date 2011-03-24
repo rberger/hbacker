@@ -74,46 +74,51 @@ module Hbacker
             :start_time => start_time, 
             :end_time => end_time, 
             :updated_at => Time.now
-          }))
+          }
+          ))
       end
     end
   
-  # Records the begining of a backup session
-  # @param [String] backup_name Name (usually the date_time_stamp) of the backup session
-  # @param [Time] started_at When the backup started
-  # @param [String] dest_root The scheme and root path of where the backup is put
-  #
-  def record_backup_start(backup_name, started_at, dest_root)
-    BackupInfo.create(
-      {
-        :name => backup_name, 
-        :started_at => started_at, 
-        :dest_root => dest_root, 
-        :updated_at => Time.now
-      }
-    )
-  end
+    # Records the begining of a backup session
+    # @param [String] backup_name Name (usually the date_time_stamp) of the backup session
+    # @param [String] dest_root The scheme and root path of where the backup is put
+    # @param [Integer] backedup_from_time The start_time of the earliest record to be backed up.
+    #   Value of 0 means its a full backup
+    # @param [Time] started_at When the backup started
+    #
+    def record_backup_start(backup_name, dest_root, backedup_from_time, started_at)
+      BackupInfo.create(
+        {
+          :name => backup_name, 
+          :started_at => started_at, 
+          :dest_root => dest_root, 
+          :updated_at => Time.now
+        }
+      )
+    end
   
-  # Records the end of a backup session (Updates existing record)
-  # @param [String] backup_name Name (usually the date_time_stamp) of the backup session
-  # @param [Time] ended_at When the backup ended
-  # @param [String] dest_root The scheme and root path of where the backup is put
-  #
-  def record_backup_end(backup_name, dest_root, ended_at)
-    info = BackupInfo.find_by_name_and_dest_root(backup_name, dest_root)
-    info.reload
-    info[:ended_at] = ended_at
-    info[:updated_at] = Time.now
-    info.save
-  end
+    # Records the end of a backup session (Updates existing record)
+    # @param [String] backup_name Name (usually the date_time_stamp) of the backup session
+    # @param [Time] ended_at When the backup ended
+    # @param [String] dest_root The scheme and root path of where the backup is put
+    #
+    def record_backup_end(backup_name, dest_root, ended_at)
+      info = BackupInfo.find_by_name_and_dest_root(backup_name, dest_root)
+      info.reload
+      info[:ended_at] = ended_at
+      info[:updated_at] = Time.now
+      info.save
+    end
   
-  # Returns a list of names of tables backed up during the specified session
-  # @param [String] backup_name Name (usually the date_time_stamp) of the backup session
-  # @param [String] dest_root The scheme and root path of where the backup is put
-  # @return [Array<String>] List of tables backed up for that session
-  def table_names_by_backup_name(backup_name, dest_root)
-    results = @hbase_table_info_class.find_by_backup_name_and_dest_root(backup_name, dest_root).collect do |t|
-      t[:name]
+    # Returns a list of names of tables backed up during the specified session
+    # @param [String] backup_name Name (usually the date_time_stamp) of the backup session
+    # @param [String] dest_root The scheme and root path of where the backup is put
+    # @return [Array<String>] List of table namess that were backed up for specified session
+    #
+    def table_names_by_backup_name(backup_name, dest_root)
+      results = @hbase_table_info_class.find_by_backup_name_and_dest_root(backup_name, dest_root).collect do |t|
+        t[:name]
+      end
     end
   end
 end

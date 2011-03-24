@@ -21,8 +21,19 @@ module Hbacker
       @stargate.show_table(table_name)
     end
     
+    ##
+    # Get the list of HBase Tables in the cluster
+    # @returns [Array<Stargate::Model::TableDescriptor>] List of TableDescriptors
     def list_tables
       @stargate.list_tables
+    end
+    
+    ##
+    # Create HBase Table
+    # @param [String] name Name of the HBase Table to create
+    # @param [Hash] schema Keypairs describing the Table Schema Hash
+    def create_table(name, schema)
+      @stargate.create_table(name, s)
     end
   end
 end

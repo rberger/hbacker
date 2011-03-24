@@ -29,7 +29,7 @@ module Hbacker
       :default => now_minus_60_sec, 
       :aliases => "-s", 
       :desc => "End time (millisecs since Unix Epoch)"
-    class_option :backup_timestamp, 
+    class_option :backup_name, 
       :default => backup_timestamp,
       :desc => "Will be the top level folder in the destination directory specified by --dest_root"
     class_option :debug, 
@@ -116,13 +116,13 @@ module Hbacker
       :required => true,
       :desc  => "Source scheme://path", 
       :banner => "s3 | s3n | hdfs | file"
-    method_option :backup_session, 
+    method_option :backup_name, 
       :type => :string, 
       :desc => "Timestamp associated with the backup session. Will be appened to source_root      ", 
       :banner => "20110322_091701"
     method_option :pattern, 
       :type => :string, 
-      :desc => "Regex for the table name within the Source scheme://path/backup_session/", 
+      :desc => "Regex for the table name within the Source scheme://path/backup_name/", 
       :banner => "\'*summary*\'"
     def import
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::INFO
