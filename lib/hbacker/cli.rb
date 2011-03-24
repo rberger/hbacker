@@ -17,35 +17,69 @@ module Hbacker
     backup_timestamp = backup_start.strftime("%Y%m%d_%H%M%S")
     
     # Common options
-    class_option :tables, :type => :array, :aliases => "-t", 
+    class_option :tables, 
+      :type => :array, 
+      :aliases => "-t", 
       :desc => "Space separated list of tables"
-    class_option :start, :default => 0, :aliases => "-s", 
+    class_option :start, 
+      :default => 0, 
+      :aliases => "-s", 
       :desc => "Start time (millisecs since Unix Epoch)"
-    class_option :end, :default => now_minus_60_sec, :aliases => "-s", 
+    class_option :end, 
+      :default => now_minus_60_sec, 
+      :aliases => "-s", 
       :desc => "End time (millisecs since Unix Epoch)"
-    class_option :backup_timestamp, :default => backup_timestamp,
-      :desc => "Will be the top level folder in the destination directory specified by --destination"
-    class_option :debug, :type => :boolean, :default => false, :aliases => "-d", 
+    class_option :backup_timestamp, 
+      :default => backup_timestamp,
+      :desc => "Will be the top level folder in the destination directory specified by --dest_root"
+    class_option :debug, 
+      :type => :boolean, 
+      :default => false, 
+      :aliases => "-d", 
       :desc => "Enable debug messages"
-    class_option :hbase_host, :type => :string, :default => "hbase-master0-staging.runa.com", :aliases => "-H",
+    class_option :hbase_host, 
+      :type => :string, 
+      :default => "hbase-master0-staging.runa.com", 
+      :aliases => "-H",
       :desc => "Host name of the host running the hbase-stargate server"
-    class_option :hbase_port, :type => :string, :default => 8080, :aliases => "-P",
+    class_option :hbase_port, 
+      :type => :string, 
+      :default => 8080, 
+      :aliases => "-P",
       :desc => "TCP Port of the hbase-stargate server"
-    class_option :hbase_version, :type => :string, :default => "0.20.3", :aliases => "-V",
+    class_option :hbase_version, 
+      :type => :string, 
+      :default => "0.20.3", 
+      :aliases => "-V",
       :desc => "Version of HBase of the source HBase"
-    class_option :aws_config, :type => :string, :default => "~/.aws/aws_config.yml", :aliases => "-c",
+    class_option :aws_config, 
+      :type => :string, 
+      :default => "~/.aws/aws_config.yml", 
+      :aliases => "-c",
       :desc => "Yaml file with aws credentials and other config"
-    class_option :hadoop_home, :type => :string, :default => "/mnt/hadoop", 
+    class_option :hadoop_home, 
+      :type => :string, 
+      :default => "/mnt/hadoop", 
       :desc => "Local Unix file system path to where the Hadoop Home"
-    class_option :hbase_home, :type => :string, :default => "/mnt/hbase",
+    class_option :hbase_home, 
+      :type => :string, 
+      :default => "/mnt/hbase",
       :desc => "Local Unix file system path to where the HBase Home"
 
     desc "export", "Export HBase table[s]."
-    method_option :all, :type => :boolean, :default => false, :aliases => "-a", 
+    method_option :all, 
+      :type => :boolean, 
+      :default => false, 
+      :aliases => "-a", 
       :desc => "All tables in HBase"
-    method_option :destination, :type => :string, :default => "s3n://runa-hbase-staging/", :aliases => "-D", :required => true,
-      :desc  => "Destination S3 bucket, S3n path, HDFS or File"
-    method_option :versions, :default => 100000,
+    method_option :dest_root, 
+      :type => :string, 
+      :default => "s3n://runa-hbase-staging/", 
+      :aliases => "-D", 
+      :required => true,
+      :desc  => "Destination root. S3 bucket, S3n path, HDFS or File"
+    method_option :versions, 
+      :default => 100000,
       :desc => "Number of versions of rows to back up per file"
     def export
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::INFO
@@ -61,7 +95,7 @@ module Hbacker
       
       if options[:all]
         exp.all_tables options
-      elsif options[:tables] && options[:destination]
+      elsif options[:tables] && options[:dest_root]
         exp.specified_tables options
       else
         Hbacker.log.error "Invalid option combination"
@@ -72,13 +106,23 @@ module Hbacker
 
     desc "import", "Import HBase table[s]."
     long_desc "Import HBase tables from a specified source. " +
-      "--source_dir must be specified as it shows what type file system and bucket/path to table data. " +
+      "--source_root       must be specified as it shows what type file system and bucket/path to table data. " +
       "If there are no --tables or --pattern specified, it will assume everything in " +
-      "contained in --source_dir is a directory representing a table"
-    method_option :source_dir, :type => :string, :default => "s3n://runa-hbase-staging/", :aliases => "-S", :required => true,
-      :desc  => "Source scheme://path", :banner => "s3 | s3n | hdfs | file"
-    method_option :backup_session, :type => :string, :desc => "Timestamp associated with the backup session", :banner => "20110322_091701"
-    method_option :pattern, :type => :string, :desc => "Regex for the table name within the Source scheme://path/backup_session/", 
+      "contained in --source_root       is a directory representing a table"
+    method_option :source_root      , 
+      :type => :string, 
+      :default => "s3n://runa-hbase-staging/", 
+      :aliases => "-S", 
+      :required => true,
+      :desc  => "Source scheme://path", 
+      :banner => "s3 | s3n | hdfs | file"
+    method_option :backup_session, 
+      :type => :string, 
+      :desc => "Timestamp associated with the backup session. Will be appened to source_root      ", 
+      :banner => "20110322_091701"
+    method_option :pattern, 
+      :type => :string, 
+      :desc => "Regex for the table name within the Source scheme://path/backup_session/", 
       :banner => "\'*summary*\'"
     def import
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::INFO
@@ -87,7 +131,7 @@ module Hbacker
       
       if options[:all]
         imp.all_tables options
-      elsif options[:tables] && options[:destination]
+      elsif options[:tables] && options[:dest_root]
         imp.specified_tables options
       else
         Hbacker.log.error "Invalid option combination"

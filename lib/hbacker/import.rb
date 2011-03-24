@@ -16,25 +16,15 @@ module Hbacker
     end
 
     ##
-    # Querys HBase to get a list of all the tables in the cluser
-    # Iterates thru the list calling Import#table to do the Import to the specified dest
-    #
-    def all_tables(opts)
-      Hbacker.log.debug "Import#all_tables from #opts[:source] to #{@hbase_home}"
-      @hbase.list_tables.each do |table|
-        dest = "#{opts[:destination]}#{opts[:backup_timestamp]}/#{table.name}/"
-        Hbacker.log.info "Backing up #{table.name} to #{dest}"
-        Hbacker.log.debug "self.table(#{table.name},#{ opts[:start]}, #{opts[:end]}, #{dest}, #{opts[:versions]})"
-        self.table(table.name, opts[:start], opts[:end], dest, opts[:versions])
-      end
-    end
-    
-    ##
     # Iterates thru the list of tables calling Import#table to do the Import to the specified dest
-    # * Get the list of names based on the 
+    # * Get the list of names based on the options from the Source directory 
+    # * Create the table on the target HBase using the schema from Db
+    # * Call the Hadoop process to move the file
+    # @param [Hash] opts Hash from the CLI with all the options set
+    #
     def specified_tables(opts)
       opts[:tables].each do |table|
-        dest = "#{opts[:destination]}#{opts[:backup_timestamp]}/#{table}/"
+        dest = "#{opts[:source_root]}#{opts[:backup_timestamp]}/#{table}/"
         Hbacker.log.info "Backing up #{table} to #{dest}"
         Hbacker.log.debug "self.table(#{table},#{ opts[:start]}, #{opts[:end]}, #{dest}, #{opts[:versions]})"
         self.table(table, opts[:start], opts[:end], dest, opts[:versions])
@@ -42,16 +32,16 @@ module Hbacker
     end
     
     ##
-    # * Uses Hadoop to import specfied table from HBase to destination file system
-    # * Record that the date range and schema of table was imported to
+    # Uses Hadoop to import specfied table from source file system to target HBase Cluster
     # 
-    # TODO: Don't import .META. table!
+    # TODO: Don't import .META. or .ROOT. tables!
     #
-    def table(table_name, start_time, end_time, destination, versions)
+    def table(table_name, start_time, end_time, source)
+      
       table_descriptor = @hbase.table_descriptor(table_name)
       
       cmd = "#{@hadoop_home}/bin/hadoop jar #{@hbase_home}/hbase-#{@hbase_version}.jar import " +
-        "#{table_name} #{destination} #{versions} #{start_time} #{end_time}"
+        "#{table_name} #{source} #{versions} #{start_time} #{end_time}"
       Hbacker.log.debug "About to execute #{cmd}"
       cmd_output = `#{cmd} 2>&1`
       # Hbacker.log.debug "cmd output: #{cmd_output}"
@@ -65,5 +55,8 @@ module Hbacker
       end
       @db.record_table_info(table_name, start_time, end_time, table_descriptor, versions)
     end
+    
+    ##
+    # Get the list of table names from the 
   end
 end
