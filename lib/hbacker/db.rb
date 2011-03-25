@@ -37,7 +37,8 @@ module Hbacker
     end
   end
   
-  class Db 
+  class Db
+    attr_reader :aws_access_key_id, :aws_secret_access_key, :hbase_name
     # Initializes SimpleDB Table and connection
     # @param [String] aws_access_key_id Amazon Access Key ID
     # @param [String] aws_secret_access_key Amazon Secret Access Key
@@ -45,6 +46,10 @@ module Hbacker
     #   Usually the FQDN with dots turned to underscores
     #
     def initialize(aws_access_key_id, aws_secret_access_key, hbase_name)
+      @aws_access_key_id = aws_access_key_id
+      @aws_secret_access_key =aws_secret_access_key
+      @hbase_name = hbase_name
+      
       sdb_table_name = "#{hbase_name}_table_info"
       
       # This seems to be the only way to dynmaically set the domain name
@@ -117,8 +122,26 @@ module Hbacker
     #
     def table_names_by_backup_name(backup_name, dest_root)
       results = @hbase_table_info_class.find_by_backup_name_and_dest_root(backup_name, dest_root).collect do |t|
+        t.reload
         t[:name]
       end
+    end
+    
+    ##
+    # Get the Attributes of an HBase table previously recorded
+    # @param [String] table_name The name of the HBase table 
+    # @param (see #table_names_by_backup_name)
+    # @return [Hash] The hash of attributes found
+    #
+    def get_table_attributes(table_name, backup_name, dest_root)
+      results = {}
+      @hbase_table_info_class.find_all_by_backup_name_and_dest_root_and_table_name(backup_name, dest_root, table_name).each do |t|
+        t.reload
+        t.each_pair do |k,v|
+          results.merge(k.to_sym => v) if Stargate::Model::ColumnDescriptor.AVAILABLE_OPTS[k]
+        end
+      end
+      results
     end
   end
 end

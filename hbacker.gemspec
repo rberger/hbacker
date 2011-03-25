@@ -25,4 +25,5 @@ Gem::Specification.new do |s|
   s.add_dependency "hbase-stargate"
   s.add_dependency "right_aws", ">= 2.0.0"
   s.add_dependency "uuidtools"
+  s.add_dependency "stalker"
 end

@@ -46,6 +46,24 @@ module Hbacker
     end
     
     ##
+    # Queue a ruby job to manage the Hbase/Hadoop job
+    def queue_table_export_job(table_name, start_time, end_time, destination, versions, backup_name)
+      args = {
+        :table_name => table_name,
+        :start_time => start_time,
+        :end_time => end_time,
+        :destination => destination,
+        :versions => versions,
+        :backup_name => backup_name,
+        :stargate_url => @hbase.url,
+        :aws_access_key_id => @db.aws_access_key_id,
+        :aws_secret_access_key => @db.aws_secret_access_key,
+        :hbase_name => @db.hbase_name
+      }
+      Stalker.enqueue('queue_table_export', args)
+    end
+    
+    ##
     # * Uses Hadoop to export specfied table from HBase to destination file system
     # * Record that the date range and schema of table was exported to
     # @param [String] table_name
@@ -53,6 +71,7 @@ module Hbacker
     # @param [Integer] end_time Latest Time to backup to (milliseconds since Unix Epoch)
     # @param [String] destination Full scheme://path for destination. Suitable for use with HBase/HDFS
     # @param [Integer] versions Number of versions to backup
+    # @param [String] backup_name Name of the Backup Session
     # @todo Check if table is empty, if so don't do hadoop job, just create the target directory and record in Db
     # @todo Make sure table is compacted before backup
     #
