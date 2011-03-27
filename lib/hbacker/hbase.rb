@@ -13,7 +13,7 @@ module Hbacker
       @url = "http://#{@master_host}#{@master_port_string}"
 
       Hbacker.log.debug "@stargate = Stargate::Client.new(#{@url.inspect})"
-      @stargate = Stargate::Client.new(@url})
+      @stargate = Stargate::Client.new(@url)
     end
     
     ##
@@ -45,7 +45,7 @@ module Hbacker
       result = nil
       
       begin
-        result = @stargate.create_table(name, s)
+        result = @stargate.create_table(name, schema)
       rescue Stargate::TableExistsError => e
         Hbacker.log.warn "Hbacker::Hbase#create_table: Table #{name} already exists. Continuing"
        status = {:exists =>  @stargate.show_table(name)}

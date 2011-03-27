@@ -12,6 +12,7 @@ module Hbacker
       end_time  :Integer
       max_versions :Integer
       versions :Integer
+      specified_versions :Integer
       compression
       in_memory :Boolean
       block_cache :Boolean
@@ -21,6 +22,7 @@ module Hbacker
       ttl :Integer
       bloomfilter
       backup_name
+      empty :Boolean
       created_at :DateTime, :default => lambda{ Time.now }
       updated_at :DateTime
     end
@@ -71,13 +73,16 @@ module Hbacker
     # @param [Integer] versions Max number of row/cell versions to backup
     # @param [String] backup_name Name (usually the date_time_stamp) of the backup session
     #
-    def record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name)
+    def record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name, empty)
       table_descriptor.column_families_to_hashes.each do |column|
         @hbase_table_info_class.create(column.merge(
           {
             :table_name => table_name, 
             :start_time => start_time, 
-            :end_time => end_time, 
+            :end_time => end_time,
+            :specified_versions => versions,
+            :backup_name => backup_name,
+            :empty => empty,
             :updated_at => Time.now
           }
           ))

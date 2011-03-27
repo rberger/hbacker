@@ -3,6 +3,7 @@ module Hbacker
   require "pp"
   
   class Export
+    # attr_reader :hadoop_home, :hbase_home
     ##
     # Initialize the Export Instance
     #
@@ -21,13 +22,8 @@ module Hbacker
     # 
     def all_tables(opts)
       Hbacker.log.debug "Export#all_tables"
-      @db.record_backup_start(opts[:backup_name], opts[:dest_root], opts[:start], Time.now)
-      @hbase.list_tables.each do |table|
-        dest = "#{opts[:dest_root]}#{opts[:backup_name]}/#{table.name}/"
-        Hbacker.log.info "Backing up #{table.name} to #{dest}"
-        Hbacker.log.debug "self.table(#{table.name},#{ opts[:start]}, #{opts[:end]}, #{dest}, #{opts[:versions]})"
-        self.table(table.name, opts[:start], opts[:end], dest, opts[:versions], opts[:backup_name])
-      end
+      opts[:tables] = @hbase.list_tables
+      specified_tables(opts)
     end
     
     ##
@@ -36,12 +32,17 @@ module Hbacker
     #
     def specified_tables(opts)
       Hbacker.log.debug "Export#specified_tables"
-      @db.record_backup_start(opts[:backup_name], opts[:dest_root], Time.now)
+      @db.record_backup_start(opts[:backup_name], opts[:dest_root], opts[:start], Time.now)
       opts[:tables].each do |table|
         dest = "#{opts[:dest_root]}#{opts[:backup_name]}/#{table}/"
         Hbacker.log.info "Backing up #{table} to #{dest}"
         Hbacker.log.debug "self.table(#{table},#{ opts[:start]}, #{opts[:end]}, #{dest}, #{opts[:versions]})"
-        self.table(table, opts[:start], opts[:end], dest, opts[:versions], opts[:backup_name])
+        has_rows = @hbase.table_has_rows?(table.name)
+        if has_rows
+          self.queue_table_export_job(table.name, opts[:start], opts[:end], dest, opts[:versions], opts[:backup_name])
+        else
+          @db.record_table_info(table.name, opts[:start], opts[:end], table_descriptor,  opts[:versions], opts[:backup_name], true)
+        end
       end
     end
     
@@ -58,7 +59,11 @@ module Hbacker
         :stargate_url => @hbase.url,
         :aws_access_key_id => @db.aws_access_key_id,
         :aws_secret_access_key => @db.aws_secret_access_key,
-        :hbase_name => @db.hbase_name
+        :hbase_name => @db.hbase_name,
+        :hbase_host => @db.hbase_host,
+        :hbase_port => @db.hbase_port,
+        :hbase_home => @db.hbase_home,
+        :hadoop_home => @db.hadoop_home
       }
       Stalker.enqueue('queue_table_export', args)
     end
@@ -84,14 +89,12 @@ module Hbacker
       cmd_output = `#{cmd} 2>&1`
       # Hbacker.log.debug "cmd output: #{cmd_output}"
       
-      Hbacker.log.debug "$?.exitstatus: #{$?.exitstatus.inspect}"
-      
       if $?.exitstatus > 0
         Hbacker.log.error"Hadoop command failed:"
         Hbacker.log.error cmd_output
         exit(-1)
       end
-      @db.record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name)
+      @db.record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name, false)
     end
   end
 end

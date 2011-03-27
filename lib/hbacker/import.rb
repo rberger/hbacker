@@ -41,7 +41,7 @@ module Hbacker
     #
     def table(table_name, source)
       
-      table_status = @hbase.create_table(table_name)
+      table_status = @hbase.create_table(table_name, table_description)
       
       cmd = "#{@hadoop_home}/bin/hadoop jar #{@hbase_home}/hbase-#{@hbase_version}.jar import " +
         "#{table_name} #{source}"

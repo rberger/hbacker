@@ -17,5 +17,5 @@ module Hbacker
     @log.level = Logger::WARN
   end
 
-  Dir[File.dirname(__FILE__) + '/lib/*.rb'].each {|file| require file }
+  Dir[File.dirname(__FILE__) + '/hbacker/*.rb'].each {|file| require file unless file =~ /\/version.rb/ }
 end

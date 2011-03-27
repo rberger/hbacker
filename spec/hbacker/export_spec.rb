@@ -11,6 +11,7 @@ describe Hbacker::Export, "table" do
     @end_time = 1291233436567
     @destination = "s3n://somebucket/#{@table_name}/"
     @versions = 100000
+    @backup_name = 20110101_111111
     
     @hbase_mock = mock('@hbase_mock')
     @hbase_mock.stub(:table_descriptor).with(@table_name)
@@ -23,11 +24,11 @@ describe Hbacker::Export, "table" do
   end
   
   it "should shell out the correct hbase command" do
-    export = Hbacker::Export.new(@hbase_mock, @db_mock, @hadoop_hm, @hbase_hm, @hbase_vsn)
+    export = Hbacker::Export.new(@hbase_mock, @db_mock, @hbase_hm, @hbase_vsn, @hadoop_hm)
     
     export.should_receive(:`).with("#{@hadoop_hm}/bin/hadoop jar #{@hbase_hm}/hbase-#{@hbase_vsn}.jar export " +
       "#{@table_name} #{@destination} #{@versions} #{@start_time} #{@end_time} 2>&1").and_return("hadoop stdout stream")
     
-    export.table(@table_name, @start_time, @end_time, @destination, @versions)
+    export.table(@table_name, @start_time, @end_time, @destination, @versions, @backup_name)
   end
 end
