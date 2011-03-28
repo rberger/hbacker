@@ -47,6 +47,7 @@ module Hbacker
         Hbacker.log.info "Backing up #{table_name} to #{dest}"
         has_rows = @hbase.table_has_rows?(table_name)
         if has_rows
+          Hbacker.log.debug "self.queue_table_export_job(#{table_name}, #{opts[:start]}, #{opts[:end]}, #{dest}, #{opts[:versions]}, #{opts[:backup_name]})"
           self.queue_table_export_job(table_name, opts[:start], opts[:end], dest, opts[:versions], opts[:backup_name])
         else
           table_descriptor = @hbase.table_descriptor(table_name)
@@ -79,7 +80,7 @@ module Hbacker
         :log_level  => Hbacker.log.level
       }
       Hbacker.log.debug "------- ENQUEUING #{args.inspect}"
-      Stalker.enqueue('queue_table_export', args)
+      Stalker.enqueue('queue_table_export', args, {:ttr => 600})
     end
     
     ##

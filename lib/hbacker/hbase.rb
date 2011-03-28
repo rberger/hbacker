@@ -38,7 +38,7 @@ module Hbacker
     #
     def table_has_rows?(table_name)
       scanner = @stargate.open_scanner(table_name)
-      rows = @stargate.get_rows(scanner)
+      rows = @stargate.get_rows(scanner, limit = 1)
       not rows.empty?
     end
     

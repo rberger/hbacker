@@ -102,15 +102,25 @@ module Hbacker
           :end_time => end_time,
           :specified_versions => versions,
           :backup_name => backup_name,
-          :empty => empty,
-          :error => error,
+          :empty => empty.inspect,
+          :error => error.inspect,
           :updated_at => Time.now.utc
         }
         
-        info = column.merge(added_info)
-        Hbacker.log.debug "column: #{column.inspect}"
-        Hbacker.log.debug "added_info: #{added_info.inspect}"
-        Hbacker.log.debug "saved_info: #{info.inspect}"
+        # ActiveSdb doesn't seem to be handling booleans right so we convert them to strings
+        column_info = column.inject({}) do  |h, (k, v)|
+          if v.nil?
+            v
+          elsif [TrueClass, FalseClass].include?(v.class)
+            v = v.to_s
+          end
+          h.merge(k => v)
+        end
+        
+        info = column_info.merge(added_info)
+        # Hbacker.log.debug "column: #{column.inspect}"
+        # Hbacker.log.debug "added_info: #{added_info.inspect}"
+        # Hbacker.log.debug "saved_info: #{info.inspect}"
         @hbase_table_info_class.create(info)
       end
     end
