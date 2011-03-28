@@ -51,7 +51,7 @@ module Hbacker
         else
           table_descriptor = @hbase.table_descriptor(table_name)
           Hbacker.log.warn "Export#specified_tables: Table: #{table_name} is empty. Recording in Db but not backing up"
-          @db.record_table_info(table_name, opts[:start], opts[:end], table_descriptor,  opts[:versions], opts[:backup_name], true)
+          @db.record_table_info(table_name, opts[:start], opts[:end], table_descriptor,  opts[:versions], opts[:backup_name], true, false)
         end
       end
     end
@@ -72,8 +72,9 @@ module Hbacker
         :hbase_name => @db.hbase_name,
         :hbase_host => @hbase.hbase_host,
         :hbase_port => @hbase.hbase_port,
-        :hbase_home => @hbase.hbase_home,
-        :hadoop_home => @hbase.hadoop_home,
+        :hbase_home => @hbase_home,
+        :hbase_version => @hbase_version,
+        :hadoop_home => @hadoop_home,
         :s3 => @s3,
         :log_level  => Hbacker.log.level
       }
@@ -106,11 +107,13 @@ module Hbacker
         Hbacker.log.error"Hadoop command failed:"
         Hbacker.log.error cmd_output
         @db.record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name, false, true)
+        Hbacker.log.debug "About to save_info to s3: #{destination}hbacker_hadoop_error.log"
         @s3.save_info("#{destination}hbacker_hadoop_error.log", cmd_output)
         raise StandardError, "Error running Haddop Command", caller
       end
       
       @db.record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name, false, false)
+      Hbacker.log.debug "About to save_info to s3: #{destination}hbacker_hadoop.log"
       @s3.save_info("#{destination}hbacker_hadoop.log", cmd_output)
     end
   end

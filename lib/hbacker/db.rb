@@ -24,6 +24,7 @@ module Hbacker
       bloomfilter
       backup_name
       empty :Boolean
+      error :Boolean
       created_at :DateTime, :default => lambda{ Time.now.utc }
       updated_at :DateTime
     end
@@ -95,18 +96,22 @@ module Hbacker
     #
     def record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name, empty, error=false)
       table_descriptor.column_families_to_hashes.each do |column|
-        @hbase_table_info_class.create(column.merge(
-          {
-            :table_name => table_name, 
-            :start_time => start_time, 
-            :end_time => end_time,
-            :specified_versions => versions,
-            :backup_name => backup_name,
-            :empty => empty,
-            :error => error,
-            :updated_at => Time.now.utc
-          }
-          ))
+        added_info = {
+          :table_name => table_name, 
+          :start_time => start_time, 
+          :end_time => end_time,
+          :specified_versions => versions,
+          :backup_name => backup_name,
+          :empty => empty,
+          :error => error,
+          :updated_at => Time.now.utc
+        }
+        
+        info = column.merge(added_info)
+        Hbacker.log.debug "column: #{column.inspect}"
+        Hbacker.log.debug "added_info: #{added_info.inspect}"
+        Hbacker.log.debug "saved_info: #{info.inspect}"
+        @hbase_table_info_class.create(info)
       end
     end
   
