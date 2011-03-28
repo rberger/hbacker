@@ -8,13 +8,21 @@ require 'hbacker/db'
 
 module Hbacker
   class CLI < Thor
-    
+    attr_reader :backup_start
     ##
     # Use (Now - 60 seconds) * 1000 to have a timestamp from 60 seconds ago in milliseconds
     #
-    backup_start = Time.now.utc
-    now_minus_60_sec = (backup_start.to_i - 60) * 1000
-    backup_timestamp = backup_start.strftime("%Y%m%d_%H%M%S")
+    @@backup_start = Time.now.utc
+    now_minus_60_sec = (@@backup_start.to_i - 60) * 1000
+    @@backup_timestamp = @@backup_start.strftime("%Y%m%d_%H%M%S")
+    
+    def self.backup_start
+      @@backup_start
+    end
+    
+    def self.backup_timestamp
+      @@backup_timestamp
+    end
     
     # Common options
     class_option :debug, 
@@ -61,7 +69,7 @@ module Hbacker
       :aliases => "-s", 
       :desc => "End time (millisecs since Unix Epoch)"
     method_option :backup_name, 
-      :default => backup_timestamp,
+      :default => @@backup_timestamp,
       :type => :string,
       :desc => "String to select the backup session. Exp: 20110327_224341",
       :banner => "STRING"
@@ -134,7 +142,7 @@ module Hbacker
       :aliases => "-s", 
       :desc => "End time (millisecs since Unix Epoch)"
     method_option :backup_name, 
-      :default => backup_timestamp,
+      :default => @@backup_timestamp,
       :type => :string,
       :desc => "String to select the backup session. Exp: 20110327_224341",
       :banner => "STRING"
@@ -245,7 +253,8 @@ module Hbacker
         
         case task
         when :export
-          export = Export.new(hbase, db, options[:hbase_home], options[:hbase_version], options[:hadoop_home])
+          s3 = Hbacker::S3.new(config['access_key_id'], config['secret_access_key'])
+          export = Export.new(hbase, db, options[:hbase_home], options[:hbase_version], options[:hadoop_home], s3)
           config.merge({:hbase => hbase, :db => db, :hbase_name => hbase_name, :export => export})
         when :import
           s3 = Hbacker::S3.new(config['access_key_id'], config['secret_access_key'])

@@ -1,5 +1,7 @@
 module Worker
   require "hbacker"
+  require 'logger'
+  
   ##
   # Stalker Job to do the work of starting a Hadoop Job to export an HBase Table
   # @param [Hash] args
@@ -20,9 +22,13 @@ module Worker
   #
   Stalker.job 'queue_table_export' do |args|
     Stalker.log "Inside queue_table_export job"
-    db = Hbacker::Db.new(args['access_key_id'], args['secret_access_key'], args['hbase_name'])
+    args = Hash.transform_keys_to_symbols(args)
+    Hbacker.log.level = args[:log_level] ? args[:log_level] : Logger::WARN
+    db = Hbacker::Db.new(args[:aws_access_key_id], args[:aws_secret_access_key], args[:hbase_name])
     hbase = Hbacker::Hbase.new(args[:hbase_home], args[:hadoop_home], args[:hbase_host], args[:hbase_port])
-    export = Hbacker::Export.new(hbase, db, args[:hbase_home], args[:hbase_version], args[:hadoop_home])
+    s3 = Hbacker::S3.new(args[:aws_access_key_id], args[:aws_secret_access_key])
+    
+    export = Hbacker::Export.new(hbase, db, args[:hbase_home], args[:hbase_version], args[:hadoop_home], s3)
     
     export.table(args[:table_name], args[:start_time], args[:end_time], args[:destination], 
       args[:versions], args[:backup_name])

@@ -18,13 +18,16 @@ describe Hbacker::Export, "table" do
     @db_mock = mock('@db_mock')
     @db_mock.stub(:record_table_info)
     Hbacker::Db.stub(:new).and_return(@db_mock)
+    @s3_mock = mock('@s3_mock')
+    @s3_mock.stub(:save_info)
+    Hbacker::S3.stub(:new).and_return(@s3_mock)
     @hadoop_hm =  "/mnt/hadoop"
     @hbase_hm = "/mnt/hbase"
     @hbase_vsn = "0.20.3"
   end
   
   it "should shell out the correct hbase command" do
-    export = Hbacker::Export.new(@hbase_mock, @db_mock, @hbase_hm, @hbase_vsn, @hadoop_hm)
+    export = Hbacker::Export.new(@hbase_mock, @db_mock, @hbase_hm, @hbase_vsn, @hadoop_hm, @s3_mock)
     
     export.should_receive(:`).with("#{@hadoop_hm}/bin/hadoop jar #{@hbase_hm}/hbase-#{@hbase_vsn}.jar export " +
       "#{@table_name} #{@destination} #{@versions} #{@start_time} #{@end_time} 2>&1").and_return("hadoop stdout stream")

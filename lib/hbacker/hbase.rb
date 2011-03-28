@@ -2,15 +2,15 @@ module Hbacker
   require "stargate"
   
   class Hbase
-    attr_reader :hbase_home, :hadoop_home, :star_gate, :url
+    attr_reader :hbase_home, :hadoop_home, :star_gate, :url, :hbase_host, :hbase_port
     
-    def initialize(hbase_home, hadoop_home, master_host, master_port=nil)
+    def initialize(hbase_home, hadoop_home, hbase_host, hbase_port=nil)
       @hbase_home = hbase_home
       @hadoop_home = hadoop_home
-      @master_host = master_host
-      @master_port = master_port
-      @master_port_string = master_port.nil? ? "" : ":#{master_port}"
-      @url = "http://#{@master_host}#{@master_port_string}"
+      @hbase_host = hbase_host
+      @hbase_port = hbase_port
+      @hbase_port_string = hbase_port.nil? ? "" : ":#{hbase_port}"
+      @url = "http://#{@hbase_host}#{@hbase_port_string}"
 
       Hbacker.log.debug "@stargate = Stargate::Client.new(#{@url.inspect})"
       @stargate = Stargate::Client.new(@url)
@@ -23,10 +23,23 @@ module Hbacker
     end
     
     ##
-    # Get the list of HBase Tables in the cluster
-    # @returns [Array<Stargate::Model::TableDescriptor>] List of TableDescriptors
-    def list_tables
-      @stargate.list_tables
+    # Get the list of the names of all HBase Tables in the cluster
+    # @returns [Array<String>] List of Table Names
+    def list_names_of_all_tables
+      tables = @stargate.list_tables
+      tables.collect { |t| t.name}
+    end
+    
+    ##
+    # Detect if a table has any rows at least one row
+    # Uses scanner to read one row.
+    # @param [String] table_name Name of the table to check
+    # @return [Boolean] True if there is a row, false if no rows
+    #
+    def table_has_rows?(table_name)
+      scanner = @stargate.open_scanner(table_name)
+      rows = @stargate.get_rows(scanner)
+      not rows.empty?
     end
     
     ##

@@ -43,6 +43,20 @@ module Hbacker
     end
   end
   
+  class RestoreInfo < RightAws::ActiveSdb::Base
+    columns do
+      restore_name
+      specified_start :Integer
+      specified_end :Integer
+      started_at :DateTime
+      ended_at :DateTime
+      source_root
+      domain_name
+      created_at :DateTime, :default => lambda{ Time.now.utc }
+      updated_at :DateTime
+    end
+  end
+  
   class Db
     attr_reader :aws_access_key_id, :aws_secret_access_key, :hbase_name, 
                 :backup_info_class, :hbase_table_info_class
@@ -79,7 +93,7 @@ module Hbacker
     # @param [Integer] versions Max number of row/cell versions to backup
     # @param [String] backup_name Name (usually the date_time_stamp) of the backup session
     #
-    def record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name, empty)
+    def record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name, empty, error=false)
       table_descriptor.column_families_to_hashes.each do |column|
         @hbase_table_info_class.create(column.merge(
           {
@@ -89,6 +103,7 @@ module Hbacker
             :specified_versions => versions,
             :backup_name => backup_name,
             :empty => empty,
+            :error => error,
             :updated_at => Time.now.utc
           }
           ))

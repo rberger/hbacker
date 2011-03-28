@@ -31,5 +31,13 @@ module Hbacker
       end
       list.flatten
     end
+    
+    def save_info(full_path, data)
+      m = %r[.*://(.+?)(/.*)].match(full_path)
+      bucket = m[1]
+      key = m[2]
+      Hbacker.log.debug "S3#save_info: bucket: #{bucket.inspect} key: #{key.inspect}"
+      @s3.put(bucket, key, data)
+    end
   end
 end
