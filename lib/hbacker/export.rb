@@ -22,8 +22,10 @@ module Hbacker
     # 
     def all_tables(opts)
       Hbacker.log.debug "Export#all_tables"
-      opts[:tables] = @hbase.list_tables
-      specified_tables(opts)
+      new_opts = {}
+      new_opts.merge(opts)
+      new_opts[:tables] = @hbase.list_tables
+      specified_tables(new_opts)
     end
     
     ##
@@ -32,7 +34,7 @@ module Hbacker
     #
     def specified_tables(opts)
       Hbacker.log.debug "Export#specified_tables"
-      @db.record_backup_start(opts[:backup_name], opts[:dest_root], opts[:start], Time.now)
+      @db.record_backup_start(opts[:backup_name], opts[:dest_root], opts[:start], opts[:end], Time.now.utc)
       opts[:tables].each do |table|
         dest = "#{opts[:dest_root]}#{opts[:backup_name]}/#{table}/"
         Hbacker.log.info "Backing up #{table} to #{dest}"

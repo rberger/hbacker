@@ -7,6 +7,7 @@ module Hbacker
   
   class TableInfo < RightAws::ActiveSdb::Base
     columns do
+      table_name
       name
       start_time  :Integer
       end_time  :Integer
@@ -23,24 +24,29 @@ module Hbacker
       bloomfilter
       backup_name
       empty :Boolean
-      created_at :DateTime, :default => lambda{ Time.now }
+      created_at :DateTime, :default => lambda{ Time.now.utc }
       updated_at :DateTime
     end
   end
   
   class BackupInfo < RightAws::ActiveSdb::Base
     columns do
-      name
+      backup_name
+      specified_start :Integer
+      specified_end :Integer
       started_at :DateTime
       ended_at :DateTime
       dest_root
-      created_at :DateTime, :default => lambda{ Time.now }
+      domain_name
+      created_at :DateTime, :default => lambda{ Time.now.utc }
       updated_at :DateTime
     end
   end
   
   class Db
-    attr_reader :aws_access_key_id, :aws_secret_access_key, :hbase_name
+    attr_reader :aws_access_key_id, :aws_secret_access_key, :hbase_name, 
+                :backup_info_class, :hbase_table_info_class
+      
     # Initializes SimpleDB Table and connection
     # @param [String] aws_access_key_id Amazon Access Key ID
     # @param [String] aws_secret_access_key Amazon Secret Access Key
@@ -52,17 +58,17 @@ module Hbacker
       @aws_secret_access_key =aws_secret_access_key
       @hbase_name = hbase_name
       
-      sdb_table_name = "#{hbase_name}_table_info"
-      
       # This seems to be the only way to dynmaically set the domain name
-      @hbase_table_info_class = Class.new(TableInfo) { set_domain_name sdb_table_name}
+      @hbase_table_info_class = Class.new(TableInfo) { set_domain_name "#{hbase_name}_table_info" }
+      # And had to do BackupInfo this way as the right_aws library was trying to use Hbacker::BackupInfo 
+      @backup_info_class =  Class.new(BackupInfo) { set_domain_name "backup_info" }
       
       # connect to SDB
       RightAws::ActiveSdb.establish_connection(aws_access_key_id, aws_secret_access_key, :logger => Hbacker.log)
 
       # Creating a domain is idempotent. Its easier to try to create than to check if it already exists
       @hbase_table_info_class.create_domain
-      BackupInfo.create_domain
+      @backup_info_class.create_domain
     end
     
     # Records HBase Table Info into SimpleDB table
@@ -83,7 +89,7 @@ module Hbacker
             :specified_versions => versions,
             :backup_name => backup_name,
             :empty => empty,
-            :updated_at => Time.now
+            :updated_at => Time.now.utc
           }
           ))
       end
@@ -92,17 +98,21 @@ module Hbacker
     # Records the begining of a backup session
     # @param [String] backup_name Name (usually the date_time_stamp) of the backup session
     # @param [String] dest_root The scheme and root path of where the backup is put
-    # @param [Integer] backedup_from_time The start_time of the earliest record to be backed up.
+    # @param [Integer] specified_start The start_time of the earliest record to be backed up.
     #   Value of 0 means its a full backup
-    # @param [Time] started_at When the backup started
+    # @param [Integer] specified_end End time of the last record to be backed up
+    # @param [Time] session_started_at When the backup started
     #
-    def record_backup_start(backup_name, dest_root, backedup_from_time, started_at)
-      BackupInfo.create(
+    def record_backup_start(backup_name, dest_root, specified_start, specified_end, session_started_at)
+      @backup_info_class.create(
         {
-          :name => backup_name, 
-          :started_at => started_at, 
+          :backup_name => backup_name, 
+          :specified_start => specified_start,
+          :specified_end => specified_end,
+          :session_started_at => session_started_at, 
           :dest_root => dest_root, 
-          :updated_at => Time.now
+          :domain_name => @hbase_table_info_class.domain,
+          :updated_at => Time.now.utc
         }
       )
     end
@@ -113,10 +123,10 @@ module Hbacker
     # @param [String] dest_root The scheme and root path of where the backup is put
     #
     def record_backup_end(backup_name, dest_root, ended_at)
-      info = BackupInfo.find_by_name_and_dest_root(backup_name, dest_root)
+      info = @backup_info_class.find_by_name_and_dest_root(backup_name, dest_root)
       info.reload
       info[:ended_at] = ended_at
-      info[:updated_at] = Time.now
+      info[:updated_at] = Time.now.utc
       info.save
     end
   
@@ -125,20 +135,44 @@ module Hbacker
     # @param [String] dest_root The scheme and root path of where the backup is put
     # @return [Array<String>] List of table namess that were backed up for specified session
     #
-    def table_names_by_backup_name(backup_name, dest_root)
-      results = @hbase_table_info_class.find_by_backup_name_and_dest_root(backup_name, dest_root).collect do |t|
+    def table_names(backup_name, dest_root, table_name=nil)
+      if table_name && table_name.include?("%")
+        conditions = ['table_name like ? AND backup_name = ? AND dest_root = ?', table_name, backup_name, dest_root]
+      else
+        conditions = ['backup_name = ? AND dest_root = ?', backup_name, dest_root]
+      end
+      results = @hbase_table_info_class.select(:all, :conditions => conditions).collect do |t|
         t.reload
-        t[:name]
+        t[:table_name]
+      end
+    end
+    
+    # Returns a list of info for tables backed up during the specified session
+    # @param [String] backup_name Name (usually the date_time_stamp) of the backup session
+    # @param [String] dest_root The scheme and root path of where the backup is put
+    # @param [String] table_name If specified, only the table name selected will be returnd.
+    #   % can be used as a wildcard at begining and/or end
+    # @return [Array<Hash>] List of table info that were backed up for specified session
+    #
+    def table_info(backup_name, dest_root, table_name=nil)
+      if table_name && table_name.include?("%")
+        conditions = ['table_name like ? AND backup_name = ? AND dest_root = ?', table_name, backup_name, dest_root]
+      else
+        conditions = ['backup_name = ? AND dest_root = ?', backup_name, dest_root]
+      end
+      results = @hbase_table_info_class.select(:all, :conditions => conditions).collect do |t|
+        t.reload
+        t.attributes
       end
     end
     
     ##
-    # Get the Attributes of an HBase table previously recorded
+    # Get the Attributes of an HBase table previously recorded ColumnDescriptor Opts
     # @param [String] table_name The name of the HBase table 
-    # @param (see #table_names_by_backup_name)
+    # @param (see #table_names)
     # @return [Hash] The hash of attributes found
     #
-    def get_table_attributes(table_name, backup_name, dest_root)
+    def table_attributes(table_name, backup_name, dest_root)
       results = {}
       @hbase_table_info_class.find_all_by_backup_name_and_dest_root_and_table_name(backup_name, dest_root, table_name).each do |t|
         t.reload
@@ -147,6 +181,25 @@ module Hbacker
         end
       end
       results
+    end
+
+    # Returns a list of info for backups for the specified session
+    # @param [String] backup_name Name (usually the date_time_stamp) of the backup session
+    #   % can be used as a wildcard at begining and/or end
+    # @return [Array<Hash>] List of backup info that were backed up for specified session
+    #
+    def backup_info(backup_name)
+      if backup_name && backup_name.include?("%")
+        conditions = {:conditions  => ["backup_name like ?", backup_name]}
+      elsif backup_name
+        conditions = {:conditions  => ["backup_name = ?", backup_name]}
+      else
+        conditions = nil
+      end
+      @backup_info_class.select(:all, conditions).collect do |backup_info|
+        backup_info.reload
+        backup_info.attributes
+      end
     end
   end
 end

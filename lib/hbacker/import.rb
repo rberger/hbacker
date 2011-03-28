@@ -25,7 +25,7 @@ module Hbacker
     # @option opts [String] :backup_name Name of the backup session / subdirectory containing table directories
     # 
     def specified_tables(opts)
-      table_names = @db.table_names_by_backup_name(opts[:backup_name], opts[:source_root])
+      table_names = @db.table_names(opts[:backup_name], opts[:source_root])
       table_names.each do |table|
         source = "#{opts[:source_root]}#{opts[:backup_name]}/#{table}/"
         Hbacker.log.info "Backing up #{table} to #{source}"

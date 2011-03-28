@@ -12,26 +12,11 @@ module Hbacker
     ##
     # Use (Now - 60 seconds) * 1000 to have a timestamp from 60 seconds ago in milliseconds
     #
-    backup_start = Time.now
+    backup_start = Time.now.utc
     now_minus_60_sec = (backup_start.to_i - 60) * 1000
     backup_timestamp = backup_start.strftime("%Y%m%d_%H%M%S")
     
     # Common options
-    class_option :tables, 
-      :type => :array, 
-      :aliases => "-t", 
-      :desc => "Space separated list of tables"
-    class_option :start, 
-      :default => 0, 
-      :aliases => "-s", 
-      :desc => "Start time (millisecs since Unix Epoch)"
-    class_option :end, 
-      :default => now_minus_60_sec, 
-      :aliases => "-s", 
-      :desc => "End time (millisecs since Unix Epoch)"
-    class_option :backup_name, 
-      :default => backup_timestamp,
-      :desc => "Will be the top level folder in the destination directory specified by --dest_root"
     class_option :debug, 
       :type => :boolean, 
       :default => false, 
@@ -42,29 +27,11 @@ module Hbacker
       :default => "hbase-master0-staging.runa.com", 
       :aliases => "-H",
       :desc => "Host name of the host running the hbase-stargate server"
-    class_option :hbase_port, 
-      :type => :string, 
-      :default => 8080, 
-      :aliases => "-P",
-      :desc => "TCP Port of the hbase-stargate server"
-    class_option :hbase_version, 
-      :type => :string, 
-      :default => "0.20.3", 
-      :aliases => "-V",
-      :desc => "Version of HBase of the source HBase"
     class_option :aws_config, 
       :type => :string, 
       :default => "~/.aws/aws_config.yml", 
       :aliases => "-c",
       :desc => "Yaml file with aws credentials and other config"
-    class_option :hadoop_home, 
-      :type => :string, 
-      :default => "/mnt/hadoop", 
-      :desc => "Local Unix file system path to where the Hadoop Home"
-    class_option :hbase_home, 
-      :type => :string, 
-      :default => "/mnt/hbase",
-      :desc => "Local Unix file system path to where the HBase Home"
 
     desc "export", "Export HBase table[s]."
     method_option :all, 
@@ -81,8 +48,43 @@ module Hbacker
     method_option :versions, 
       :default => 100000,
       :desc => "Number of versions of rows to back up per file"
+    method_option :tables, 
+      :type => :array, 
+      :aliases => "-t", 
+      :desc => "Space separated list of tables"
+    method_option :start, 
+      :default => 0, 
+      :aliases => "-s", 
+      :desc => "Start time (millisecs since Unix Epoch)"
+    method_option :end, 
+      :default => now_minus_60_sec, 
+      :aliases => "-s", 
+      :desc => "End time (millisecs since Unix Epoch)"
+    method_option :backup_name, 
+      :default => backup_timestamp,
+      :type => :string,
+      :desc => "String to select the backup session. Exp: 20110327_224341",
+      :banner => "STRING"
+    method_option :hbase_port, 
+      :type => :string, 
+      :default => 8080, 
+      :aliases => "-P",
+      :desc => "TCP Port of the hbase-stargate server"
+    method_option :hbase_version, 
+      :type => :string, 
+      :default => "0.20.3", 
+      :aliases => "-V",
+      :desc => "Version of HBase of the source HBase"
+    method_option :hadoop_home, 
+      :type => :string, 
+      :default => "/mnt/hadoop", 
+      :desc => "Local Unix file system path to where the Hadoop Home"
+    method_option :hbase_home, 
+      :type => :string, 
+      :default => "/mnt/hbase",
+      :desc => "Local Unix file system path to where the HBase Home"
     def export
-      Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::INFO
+      Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
       
       if options[:all] && options[:tables]
         Hbacker.log.error "Can only choose one of --all or --tables"
@@ -116,16 +118,46 @@ module Hbacker
       :required => true,
       :desc  => "Source scheme://path", 
       :banner => "s3 | s3n | hdfs | file"
-    method_option :backup_name, 
-      :type => :string, 
-      :desc => "Timestamp associated with the backup session. Will be appened to source_root      ", 
-      :banner => "20110322_091701"
     method_option :pattern, 
       :type => :string, 
-      :desc => "Regex for the table name within the Source scheme://path/backup_name/", 
-      :banner => "\'*summary*\'"
+      :desc => "SQL Wildcard (%) for the table name within the Source scheme://path/backup_name/ Exp: %summary%"
+    method_option :tables, 
+      :type => :array, 
+      :aliases => "-t", 
+      :desc => "Space separated list of tables"
+    method_option :start, 
+      :default => 0, 
+      :aliases => "-s", 
+      :desc => "Start time (millisecs since Unix Epoch)"
+    method_option :end, 
+      :default => now_minus_60_sec, 
+      :aliases => "-s", 
+      :desc => "End time (millisecs since Unix Epoch)"
+    method_option :backup_name, 
+      :default => backup_timestamp,
+      :type => :string,
+      :desc => "String to select the backup session. Exp: 20110327_224341",
+      :banner => "STRING"
+    method_option :hbase_port, 
+      :type => :string, 
+      :default => 8080, 
+      :aliases => "-P",
+      :desc => "TCP Port of the hbase-stargate server"
+    method_option :hbase_version, 
+      :type => :string, 
+      :default => "0.20.3", 
+      :aliases => "-V",
+      :desc => "Version of HBase of the source HBase"
+    method_option :hadoop_home, 
+      :type => :string, 
+      :default => "/mnt/hadoop", 
+      :desc => "Local Unix file system path to where the Hadoop Home"
+    method_option :hbase_home, 
+      :type => :string, 
+      :default => "/mnt/hbase",
+      :desc => "Local Unix file system path to where the HBase Home"
     def import
-      Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::INFO
+      Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
       config = setup(:import, options)
       imp = config[:export]
       
@@ -140,6 +172,66 @@ module Hbacker
       end
     end
 
+    desc "db", "Query Backup Meta Info DB"
+    long_desc "Support functions to allow querying of the DB used to maintain information about backups" +
+    "Options backup_name and table_name allow the use of % for a wildcard at beginning and/or end"
+    method_option :hbase_host, 
+      :type => :string, 
+      :default => "hbase-master0-staging.runa.com", 
+      :aliases => "-H",
+      :desc => "Name of Hbase master server to find backups for",
+      :required => true
+    method_option :table_name,
+      :type => :string,
+      :desc => "Optional. Used to limit which tables will be displayed " +
+        "Exp: %staging_consumer_events%",
+      :banner => "STRING"
+    method_option :backup_name, 
+      :type => :string,
+      :desc => "String to select the backup session. Exp: 20110327_%",
+      :banner => "STRING"
+    method_option :dest_root,
+      :type => :string,
+      :desc => "Limit backups to ones that saved in this locaiton",
+      :default => "s3n://runa-hbase-staging/",
+      :required => true
+    def db
+      Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
+      
+      config = setup(:db, options)
+      db = config[:db]
+      # Hbacker.log.debug "db: #{db.inspect} config:"
+      # pp config if options[:debug]
+      
+      backup_name = options[:backup_name]
+      table_name = options[:table_name]
+      dest_root = options[:dest_root]
+      
+      backups = db.backup_info(backup_name)
+      
+      backups.each do |backup|
+        backup_name = backup['backup_name'].first
+        attributes_string = ""
+        backup.each_pair do |k,v|
+          next if %w(backup_name id).include?(k)
+          attributes_string += "#{k}: #{backup[k]} "
+        end
+        puts "#{backup_name}: #{attributes_string}"
+        if table_name
+          tables = db.table_info(backup_name, dest_root, table_name)
+          tables.each do |table|
+            attributes_string = ""
+            table.each_pair do |k,v|
+              next if k == :table_name
+              next if %w(table_name id).include?(k)
+              attributes_string += "#{k}: #{v} "
+            end
+            puts "#{table[:table_name]}: #{attributes_string}"
+          end
+        end
+      end
+    end
+
     no_tasks do
       ##
       # Initializes all the objects needed by the main tasks
@@ -149,7 +241,7 @@ module Hbacker
         config = YAML.load_file(File.expand_path(options[:aws_config]))
         hbase_name = options[:hbase_host].gsub(/[-\.]/, "_")
         db = Hbacker::Db.new(config['access_key_id'], config['secret_access_key'], hbase_name)
-        hbase = Hbacker::Hbase.new(options[:hbase_home], options[:hadoop_home], options[:hbase_host], options[:hbase_port])
+        hbase = Hbacker::Hbase.new(options[:hbase_home], options[:hadoop_home], options[:hbase_host], options[:hbase_port]) unless task == :db
         
         case task
         when :export
@@ -159,6 +251,8 @@ module Hbacker
           s3 = Hbacker::S3.new(config['access_key_id'], config['secret_access_key'])
           import = Import.new(hbase, db, options[:hbase_home], options[:hbase_version], options[:hadoop_home], s3)
           config.merge({:hbase => hbase, :db => db, :hbase_name => hbase_name, :import => import})
+        when :db
+          config.merge({:hbase => hbase, :db => db, :hbase_name => hbase_name})
         else
           Hbacker.log.error "Invalid task in CLI#setup: #{task}"
           exit(-1)
