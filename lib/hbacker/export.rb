@@ -107,7 +107,7 @@ module Hbacker
         Hbacker.log.error cmd_output
         @db.record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name, false, true)
         @s3.save_info("#{destination}hbacker_hadoop_error.log", cmd_output)
-        exit(-1)
+        raise StandardError, "Error running Haddop Command", caller
       end
       
       @db.record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name, false, false)

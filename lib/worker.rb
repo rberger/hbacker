@@ -22,14 +22,23 @@ module Worker
   #
   Stalker.job 'queue_table_export' do |args|
     Stalker.log "Inside queue_table_export job"
+    Stalker.error do |e, job, args|
+      stmt = "WORKER ERROR: job: #{job} e: #{e.inspect} args: #{args.inspect}"
+      Hbacker.log.error stmt
+      Stalker.log stmt
+      puts stmt
+    end
+
+
     args = Hash.transform_keys_to_symbols(args)
     Hbacker.log.level = args[:log_level] ? args[:log_level] : Logger::WARN
+    
     db = Hbacker::Db.new(args[:aws_access_key_id], args[:aws_secret_access_key], args[:hbase_name])
     hbase = Hbacker::Hbase.new(args[:hbase_home], args[:hadoop_home], args[:hbase_host], args[:hbase_port])
     s3 = Hbacker::S3.new(args[:aws_access_key_id], args[:aws_secret_access_key])
     
     export = Hbacker::Export.new(hbase, db, args[:hbase_home], args[:hbase_version], args[:hadoop_home], s3)
-    
+    Stalker.log "Pretending to do something"
     export.table(args[:table_name], args[:start_time], args[:end_time], args[:destination], 
       args[:versions], args[:backup_name])
   end

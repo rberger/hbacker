@@ -54,7 +54,7 @@ module Hbacker
         Hbacker.log.error"Hadoop command failed: #{cmd}"
         Hbacker.log.error cmd_output
         @s3.save_info("#{destination}hbacker_hadoop_import_error_#{import_session_name}.log", cmd_output)
-        exit(-1)
+        raise StandardError, "Error running Haddop Command", caller
       end
       @s3.save_info("#{destination}hbacker_hadoop_error.log", cmd_output)
     end

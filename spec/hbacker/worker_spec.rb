@@ -12,6 +12,8 @@ describe Hbacker, "queue_table_export Stalker job" do
           @@handler = {}
           @@handler[j] = block
         end
+        def error(&blk)
+        end
         def handler
           @@handler
         end
