@@ -4,6 +4,7 @@ module Hbacker
   require "pp"
   
   class S3
+    attr_reader :s3
     # Initialize connection to S3
     # @param [String] aws_access_key_id Amazon Access Key ID
     # @param [String] aws_secret_access_key Amazon Secret Access Key

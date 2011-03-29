@@ -47,8 +47,11 @@ module Hbacker
         Hbacker.log.info "Backing up #{table_name} to #{dest}"
         has_rows = @hbase.table_has_rows?(table_name)
         if has_rows
+          if @hbase.wait_for_mapred_queue(opts[:mapred_max_jobs], 10000, 2) != :ok
+            raise Exception, "Timedout waiting #{10000 *2} seconds for Hadoop Map Reduce Queue to be less than #{opts[:mapred_max_jobs]} jobs"
+          end
           Hbacker.log.debug "self.queue_table_export_job(#{table_name}, #{opts[:start]}, #{opts[:end]}, #{dest}, #{opts[:versions]}, #{opts[:backup_name]})"
-          self.queue_table_export_job(table_name, opts[:start], opts[:end], dest, opts[:versions], opts[:backup_name])
+          self.queue_table_export_job(table_name, opts[:start], opts[:end], dest, opts[:versions], opts[:backup_name], opts[:timeout])
         else
           table_descriptor = @hbase.table_descriptor(table_name)
           Hbacker.log.warn "Export#specified_tables: Table: #{table_name} is empty. Recording in Db but not backing up"
@@ -59,7 +62,7 @@ module Hbacker
     
     ##
     # Queue a ruby job to manage the Hbase/Hadoop job
-    def queue_table_export_job(table_name, start_time, end_time, destination, versions, backup_name)
+    def queue_table_export_job(table_name, start_time, end_time, destination, versions, backup_name, timeout)
       args = {
         :table_name => table_name,
         :start_time => start_time,
@@ -80,7 +83,7 @@ module Hbacker
         :log_level  => Hbacker.log.level
       }
       Hbacker.log.debug "------- ENQUEUING #{args.inspect}"
-      Stalker.enqueue('queue_table_export', args, {:ttr => 600})
+      Stalker.enqueue('queue_table_export', args, {:ttr => timeout})
     end
     
     ##

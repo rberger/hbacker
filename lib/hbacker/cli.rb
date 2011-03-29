@@ -54,6 +54,7 @@ module Hbacker
       :required => true,
       :desc  => "Destination root. S3 bucket, S3n path, HDFS or File"
     method_option :versions, 
+      :type => :numeric,
       :default => 100000,
       :desc => "Number of versions of rows to back up per file"
     method_option :tables, 
@@ -61,10 +62,12 @@ module Hbacker
       :aliases => "-t", 
       :desc => "Space separated list of tables"
     method_option :start, 
+      :type => :numeric,
       :default => 0, 
       :aliases => "-s", 
       :desc => "Start time (millisecs since Unix Epoch)"
     method_option :end, 
+      :type => :numeric,
       :default => now_minus_60_sec, 
       :aliases => "-s", 
       :desc => "End time (millisecs since Unix Epoch)"
@@ -74,7 +77,7 @@ module Hbacker
       :desc => "String to select the backup session. Exp: 20110327_224341",
       :banner => "STRING"
     method_option :hbase_port, 
-      :type => :string, 
+      :type => :numeric,
       :default => 8080, 
       :aliases => "-P",
       :desc => "TCP Port of the hbase-stargate server"
@@ -91,6 +94,14 @@ module Hbacker
       :type => :string, 
       :default => "/mnt/hbase",
       :desc => "Local Unix file system path to where the HBase Home"
+    method_option :mapred_max_jobs,
+      :type => :numeric,
+      :default => 6,
+      :desc => "Will wait until the mapreduce job queue on hadoop cluster is less than this."
+    method_option :timeout,
+      :type => :numeric,
+      :default => 30000,
+      :desc  => "Stalker / Beanstalk job Timeout in seconds"
     def export
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
       
@@ -138,6 +149,7 @@ module Hbacker
       :aliases => "-s", 
       :desc => "Start time (millisecs since Unix Epoch)"
     method_option :end, 
+      :type => :numeric,
       :default => now_minus_60_sec, 
       :aliases => "-s", 
       :desc => "End time (millisecs since Unix Epoch)"
@@ -147,7 +159,7 @@ module Hbacker
       :desc => "String to select the backup session. Exp: 20110327_224341",
       :banner => "STRING"
     method_option :hbase_port, 
-      :type => :string, 
+      :type => :numeric,
       :default => 8080, 
       :aliases => "-P",
       :desc => "TCP Port of the hbase-stargate server"
@@ -164,6 +176,14 @@ module Hbacker
       :type => :string, 
       :default => "/mnt/hbase",
       :desc => "Local Unix file system path to where the HBase Home"
+    method_option :mapred_max_jobs,
+      :type => :numeric,
+      :default => 6,
+      :desc => "Will wait until the mapreduce job queue on hadoop cluster is less than this."
+    method_option :timeout,
+      :type => :numeric,
+      :default => 30000,
+      :desc  => "Stalker / Beanstalk job Timeout in seconds"
     def import
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
       config = setup(:import, options)
