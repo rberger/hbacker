@@ -1,7 +1,6 @@
 module Hbacker
   require "hbacker"
   require "stalker"
-  require "pp"
   
   class Export
     # attr_reader :hadoop_home, :hbase_home
@@ -43,9 +42,12 @@ module Hbacker
 
       @db.record_backup_start(opts[:backup_name], opts[:dest_root], opts[:start], opts[:end], Time.now.utc)
       opts[:tables].each do |table_name|
+        
         dest = "#{opts[:dest_root]}#{opts[:backup_name]}/#{table_name}/"
-        Hbacker.log.debug "Calling queue_table_export_job(#{table_name}, #{opts[:start]}, #{opts[:end]}, #{dest}, #{opts[:versions]}, #{opts[:backup_name]})"
-        self.queue_table_export_job(table_name, opts[:start], opts[:end], dest, opts[:versions], opts[:backup_name], opts[:timeout])
+        Hbacker.log.debug "Calling queue_table_export_job(#{table_name}, #{opts[:start]}, "+
+          "#{opts[:end]}, #{dest}, #{opts[:versions]}, #{opts[:backup_name]})"
+        self.queue_table_export_job(table_name, opts[:start], opts[:end], dest, opts[:versions], 
+          opts[:backup_name], opts[:timeout])
       end
     end
     

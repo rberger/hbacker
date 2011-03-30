@@ -2,8 +2,6 @@ module Hbacker
   require "right_aws"
   require "sdb/active_sdb"
   require "hbacker"
-  require "hbacker/stargate"
-  require "pp"
   
   class TableInfo < RightAws::ActiveSdb::Base
     columns do

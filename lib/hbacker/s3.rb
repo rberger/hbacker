@@ -1,7 +1,6 @@
 module Hbacker
   require "right_aws"
   require "hbacker"
-  require "pp"
   
   class S3
     attr_reader :s3
