@@ -44,19 +44,8 @@ module Hbacker
       @db.record_backup_start(opts[:backup_name], opts[:dest_root], opts[:start], opts[:end], Time.now.utc)
       opts[:tables].each do |table_name|
         dest = "#{opts[:dest_root]}#{opts[:backup_name]}/#{table_name}/"
-        Hbacker.log.info "Backing up #{table_name} to #{dest}"
-        has_rows = @hbase.table_has_rows?(table_name)
-        if has_rows
-          if @hbase.wait_for_mapred_queue(opts[:mapred_max_jobs], 10000, 2) != :ok
-            raise Exception, "Timedout waiting #{10000 *2} seconds for Hadoop Map Reduce Queue to be less than #{opts[:mapred_max_jobs]} jobs"
-          end
-          Hbacker.log.debug "self.queue_table_export_job(#{table_name}, #{opts[:start]}, #{opts[:end]}, #{dest}, #{opts[:versions]}, #{opts[:backup_name]})"
-          self.queue_table_export_job(table_name, opts[:start], opts[:end], dest, opts[:versions], opts[:backup_name], opts[:timeout])
-        else
-          table_descriptor = @hbase.table_descriptor(table_name)
-          Hbacker.log.warn "Export#specified_tables: Table: #{table_name} is empty. Recording in Db but not backing up"
-          @db.record_table_info(table_name, opts[:start], opts[:end], table_descriptor,  opts[:versions], opts[:backup_name], true, false)
-        end
+        Hbacker.log.debug "Calling queue_table_export_job(#{table_name}, #{opts[:start]}, #{opts[:end]}, #{dest}, #{opts[:versions]}, #{opts[:backup_name]})"
+        self.queue_table_export_job(table_name, opts[:start], opts[:end], dest, opts[:versions], opts[:backup_name], opts[:timeout])
       end
     end
     

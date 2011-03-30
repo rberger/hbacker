@@ -33,12 +33,31 @@ module Worker
     args = Hash.transform_keys_to_symbols(args)
     Hbacker.log.level = args[:log_level] ? args[:log_level] : Logger::DEBUG
     
-    db = Hbacker::Db.new(args[:aws_access_key_id], args[:aws_secret_access_key], args[:hbase_name])
-    hbase = Hbacker::Hbase.new(args[:hbase_home], args[:hadoop_home], args[:hbase_host], args[:hbase_port])
-    s3 = Hbacker::S3.new(args[:aws_access_key_id], args[:aws_secret_access_key])
-    export = Hbacker::Export.new(hbase, db, args[:hbase_home], args[:hbase_version], args[:hadoop_home], s3)
+    # Turn args hash into instance variables. These are read only
+    args.each_pair do |k,v|
+      self.instance_variable_set("@#{k}", v)
+      self.class.send(:define_method, k, proc{self.instance_variable_get("@#{k}")})
+    end
 
-    export.table(args[:table_name], args[:start_time], args[:end_time], args[:destination], 
-      args[:versions], args[:backup_name])
+    
+    db = Hbacker::Db.new(aws_access_key_id, aws_secret_access_key, hbase_name)
+    hbase = Hbacker::Hbase.new(hbase_home, hadoop_home, hbase_host, hbase_port)
+    s3 = Hbacker::S3.new(aws_access_key_id, aws_secret_access_key)
+    export = Hbacker::Export.new(hbase, db, hbase_home, hbase_version, hadoop_home, s3)
+    
+    has_rows = @hbase.table_has_rows?(table_name)
+      
+    if has_rows
+      if @hbase.wait_for_mapred_queue(opts[:mapred_max_jobs], 10000, 2) != :ok
+        raise Exception, "Timedout waiting #{10000 *2} seconds for Hadoop Map Reduce Queue to be less than #{opts[:mapred_max_jobs]} jobs"
+      end
+      Hbacker.log.info "Backing up #{table_name} to #{dest}"
+      export.table(table_name, start_time, end_time, destination, versions, backup_name)
+    else
+      table_descriptor = @hbase.table_descriptor(table_name)
+      Hbacker.log.warn "Worker#queue_table_export: Table: #{table_name} is empty. Recording in Db but not backing up"
+      @db.record_table_info(table_name, start_time, end_time, table_descriptor,  versions, backup_name, true, false)
+    end
+
   end
 end
