@@ -24,7 +24,7 @@ module Hbacker
 
     ##
     # Get the list of the names of all HBase Tables in the cluster
-    # @returns [Array<String>] List of Table Names
+    # @return [Array<String>] List of Table Names
     def list_names_of_all_tables
       tables = @stargate.list_tables
       tables.collect { |t| t.name}
@@ -50,7 +50,7 @@ module Hbacker
     # @option status [Stargate::Model::TableDescriptor] :created Everything is cool.
     # @option status [Stargate::Model::TableDescriptor] :exists If the table already exists. Value is the TableDescriptor
     # @option status [Stargate::TableFailCreateError] :hbase_table_create_error
-    # @optioin status [Exception] :generic_exception Some other Exception
+    # @option status [Exception] :generic_exception Some other Exception
     # @option status [String] :wtf Should never get this exception
     #
     def create_table(name, schema)
