@@ -102,6 +102,14 @@ module Hbacker
       :type => :numeric,
       :default => 30000,
       :desc  => "Stalker / Beanstalk job Timeout in seconds"
+    method_option :workers_timeout,
+      :type => :numeric,
+      :default => 60000,
+      :desc => "Timeout for waiting for # of workers in Beanstalk Queue to get less than worker_watermark"
+    method_option :worker_watermark,
+      :type => :numeric,
+      :default => 20,
+      :desc => "Will not add more than this number of workers in queue at a time"
     def export
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
       
@@ -184,6 +192,14 @@ module Hbacker
       :type => :numeric,
       :default => 30000,
       :desc  => "Stalker / Beanstalk job Timeout in seconds"
+    method_option :workers_timeout,
+      :type => :numeric,
+      :default => 60000,
+      :desc => "Timeout for waiting for # of workers in Beanstalk Queue to get less than worker_watermark"
+    method_option :worker_watermark,
+      :type => :numeric,
+      :default => 20,
+      :desc => "Will not add more than this number of workers in queue at a time"
     def import
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
       config = setup(:import, options)

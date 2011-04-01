@@ -44,6 +44,15 @@ module Hbacker
       opts[:tables].each do |table_name|
         
         dest = "#{opts[:dest_root]}#{opts[:backup_name]}/#{table_name}/"
+        
+        wait_results = wait_for_hbacker_queue('queue_table_export_job', opts[:workers_watermark], opts[:workers_timeout])
+        unless wait_results[:ok]
+          msg = "Hbacker::Export#specified_tables: Timeout (#{opts[:workers_timeout]}) " +
+            " waiting for workers in queue < opts[:workers_timeout]"
+          Hbacker.log.error msg
+          raise Timeout::Error, msg
+        end
+        
         Hbacker.log.debug "Calling queue_table_export_job(#{table_name}, #{opts[:start]}, "+
           "#{opts[:end]}, #{dest}, #{opts[:versions]}, #{opts[:backup_name]})"
         self.queue_table_export_job(table_name, opts[:start], opts[:end], dest, opts[:versions], 

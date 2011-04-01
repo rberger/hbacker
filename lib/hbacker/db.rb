@@ -3,23 +3,12 @@ module Hbacker
   require "sdb/active_sdb"
   require "hbacker"
   
-  class TableInfo < RightAws::ActiveSdb::Base
+  class TableBackup < RightAws::ActiveSdb::Base
     columns do
       table_name
-      name
       start_time  :Integer
       end_time  :Integer
-      max_versions :Integer
-      versions :Integer
       specified_versions :Integer
-      compression
-      in_memory :Boolean
-      block_cache :Boolean
-      blockcache :Boolean
-      blocksize :Integer
-      length :Integer
-      ttl :Integer
-      bloomfilter
       backup_name
       empty :Boolean
       error :Boolean
@@ -28,7 +17,26 @@ module Hbacker
     end
   end
   
-  class BackupInfo < RightAws::ActiveSdb::Base
+  class TableFamlies < RightAws::ActiveSdb::Base
+    columns do
+      table_name
+      name
+      max_versions :Integer
+      versions :Integer
+      compression
+      in_memory :Boolean
+      block_cache :Boolean
+      blockcache :Boolean
+      blocksize :Integer
+      length :Integer
+      ttl :Integer
+      bloomfilter
+      created_at :DateTime, :default => lambda{ Time.now.utc }
+      updated_at :DateTime
+    end
+  end
+  
+  class Backup < RightAws::ActiveSdb::Base
     columns do
       backup_name
       specified_start :Integer
@@ -36,13 +44,13 @@ module Hbacker
       started_at :DateTime
       ended_at :DateTime
       dest_root
-      domain_name
+      cluster_namee
       created_at :DateTime, :default => lambda{ Time.now.utc }
       updated_at :DateTime
     end
   end
   
-  class RestoreInfo < RightAws::ActiveSdb::Base
+  class Restore < RightAws::ActiveSdb::Base
     columns do
       restore_name
       specified_start :Integer
@@ -50,7 +58,7 @@ module Hbacker
       started_at :DateTime
       ended_at :DateTime
       source_root
-      domain_name
+      cluster_namee
       created_at :DateTime, :default => lambda{ Time.now.utc }
       updated_at :DateTime
     end
@@ -72,7 +80,8 @@ module Hbacker
       @hbase_name = hbase_name
       
       # This seems to be the only way to dynmaically set the domain name
-      @hbase_table_info_class = Class.new(TableInfo) { set_domain_name "#{hbase_name}_table_info" }
+      @hbase_table_backup_class = Class.new(TableBackup) { set_domain_name "#{hbase_name}_table_backup" }
+      @hbase_table_families_class = Class.new(TableFamlies) { set_domain_name "#{hbase_name}_table_families" }
       # And had to do BackupInfo this way as the right_aws library was trying to use Hbacker::BackupInfo 
       @backup_info_class =  Class.new(BackupInfo) { set_domain_name "backup_info" }
       
@@ -80,7 +89,8 @@ module Hbacker
       RightAws::ActiveSdb.establish_connection(aws_access_key_id, aws_secret_access_key, :logger => Hbacker.log)
 
       # Creating a domain is idempotent. Its easier to try to create than to check if it already exists
-      @hbase_table_info_class.create_domain
+      @hbase_table_backup_class.create_domain
+      @hbase_table_families_class.create_domain
       @backup_info_class.create_domain
     end
     
@@ -93,18 +103,24 @@ module Hbacker
     # @param [String] backup_name Name (usually the date_time_stamp) of the backup session
     #
     def record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name, empty, error=false)
+      now = Time.now.utc
       table_descriptor.column_families_to_hashes.each do |column|
         added_info = {
           :table_name => table_name, 
-          :start_time => start_time, 
-          :end_time => end_time,
-          :specified_versions => versions,
           :backup_name => backup_name,
-          :empty => empty.inspect,
-          :error => error.inspect,
-          :updated_at => Time.now.utc
+          :updated_at => now
         }
         
+        table_backup_info = {
+          :table_name => table_name, 
+          :backup_name => backup_name,
+          :start_time => start_time, 
+          :end_time => end_time,
+          :empty => empty.inspect,
+          :error => error.inspect,
+          :specified_versions => versions,
+          :updated_at => Time.now.utc
+        }
         # ActiveSdb doesn't seem to be handling booleans right so we convert them to strings
         column_info = column.inject({}) do  |h, (k, v)|
           if v.nil?
@@ -119,7 +135,7 @@ module Hbacker
         # Hbacker.log.debug "column: #{column.inspect}"
         # Hbacker.log.debug "added_info: #{added_info.inspect}"
         # Hbacker.log.debug "saved_info: #{info.inspect}"
-        @hbase_table_info_class.create(info)
+        @hbase_table_backup_class.create(info)
       end
     end
   
@@ -139,7 +155,7 @@ module Hbacker
           :specified_end => specified_end,
           :session_started_at => session_started_at, 
           :dest_root => dest_root, 
-          :domain_name => @hbase_table_info_class.domain,
+          :cluster_namee => @hbase_name,
           :updated_at => Time.now.utc
         }
       )
