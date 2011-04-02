@@ -24,7 +24,7 @@ module Hbacker
     # @option opts [String] :session_name Name of the export session / subdirectory containing table directories
     # 
     def specified_tables(opts)
-      export_table_names = @db.export_table_names(opts[:session_name], opts[:source_root])
+      export_table_names = @db.table_names(:export, opts[:session_name], opts[:source_root])
       export_table_names.each do |table|
         source = "#{opts[:source_root]}#{opts[:session_name]}/#{table}/"
         Hbacker.log.info "Backing up #{table} to #{source}"

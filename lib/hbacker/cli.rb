@@ -251,7 +251,7 @@ module Hbacker
       table_name = options[:table_name]
       dest_root = options[:dest_root]
       
-      exports = db.export_info(session_name)
+      exports = db.session_info(:export, session_name)
       
       exports.each do |export|
         session_name = export['session_name'].first
@@ -262,7 +262,7 @@ module Hbacker
         end
         puts "#{session_name}: #{attributes_string}"
         if table_name
-          tables = db.export_table_info(session_name, dest_root, table_name)
+          tables = db.table_info(:export, session_name, dest_root, table_name)
           tables.each do |table|
             attributes_string = ""
             table.each_pair do |k,v|

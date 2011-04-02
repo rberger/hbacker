@@ -41,7 +41,7 @@ module Hbacker
         Hbacker.log.debug "Export#specified_tables"
         opts = Hash.transform_keys_to_symbols(opts)
 
-        @db.export_start_info(opts[:session_name], opts[:dest_root], opts[:start], opts[:end], Time.now.utc)
+        @db.start_info(:export, opts[:session_name], opts[:dest_root], opts[:start], opts[:end], Time.now.utc)
         opts[:tables].each do |table_name|
         
           dest = "#{opts[:dest_root]}#{opts[:session_name]}/#{table_name}/"

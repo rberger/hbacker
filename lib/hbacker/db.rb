@@ -47,35 +47,20 @@ module Hbacker
         :specified_versions => versions,
         :updated_at => now
       }
-      case mode
-      when :export
-        ExportedHbaseTable.create(table_info)
-      when :import
-        ImportedHbaseTable.create(table_info)
-      else
-        Hbacker.log.error "Hbacker::Db#table_info: Invalid mode: #{mode.inspect}"
-      end
+      klass = {:export => ExportedHbaseTable, :import => ImportedHbaseTable}
+      klass[mode].create(table_info)
       
       table_descriptor.column_families_to_hashes.each do |column|
-        added_info = {
-          :table_name => table_name, 
-          :session_name => session_name,
-          :updated_at => now
-        }
+        column.merge!(
+          {
+            :table_name => table_name, 
+            :session_name => session_name,
+            :updated_at => now
+          }
+        )
         
-        info = column_info.merge(added_info)
-        # Hbacker.log.debug "column: #{column.inspect}"
-        # Hbacker.log.debug "added_info: #{added_info.inspect}"
-        # Hbacker.log.debug "saved_info: #{info.inspect}"
-        ExportedColumnDescriptor.create(info)
-        case mode
-        when :export
-          ExportedColumnDescriptor.create(info)
-        when :import
-          ImportedColumnDescriptor.create(info)
-        else
-          Hbacker.log.error "Hbacker::Db#table_info: Invalid mode: #{mode.inspect}"
-        end
+        klass = {:export => ExportedColumnDescriptor, :import => ImportedColumnDescriptor}
+        klass[mode].create(column)
       end
     end
   
@@ -87,18 +72,19 @@ module Hbacker
     # @param [Integer] specified_end End time of the last record to be backed up
     # @param [Time] session_started_at When the export started
     #
-    def export_start_info(session_name, dest_root, specified_start, specified_end, session_started_at)
-      ExportSession.create(
-        {
-          :session_name => session_name, 
-          :specified_start => specified_start,
-          :specified_end => specified_end,
-          :session_started_at => session_started_at, 
-          :dest_root => dest_root, 
-          :cluster_namee => @hbase_name,
-          :updated_at => Time.now.utc
-        }
-      )
+    def start_info(mode, session_name, dest_root, specified_start, specified_end, session_started_at)
+      session_info = {
+        :session_name => session_name, 
+        :specified_start => specified_start,
+        :specified_end => specified_end,
+        :session_started_at => session_started_at, 
+        :dest_root => dest_root, 
+        :cluster_namee => @hbase_name,
+        :updated_at => Time.now.utc
+      }
+      
+      klass = {:export => ExportSession, :import => ImportSession}
+      klass[mode].create(session_info)
     end
   
     # Records the end of a export session (Updates existing record)
@@ -106,9 +92,11 @@ module Hbacker
     # @param [Time] ended_at When the export ended
     # @param [String] dest_root The scheme and root path of where the export is put
     #
-    def export_end_info(session_name, dest_root, ended_at, error=nil, error_info=nil)
+    def end_info(mode, session_name, dest_root, ended_at, error=nil, error_info=nil)
       now = Time.now.utc
-      info = ExportSession.find_by_name_and_dest_root(session_name, dest_root)
+      klass = {:export => ExportSession, :import => ImportSession}
+      
+      info = klass[mode].find_by_name_and_dest_root(session_name, dest_root)
       info.reload
       info[:error] = error if error
       info[:error_info] = error_info if error_info
@@ -122,13 +110,15 @@ module Hbacker
     # @param [String] dest_root The scheme and root path of where the export is put
     # @return [Array<String>] List of table namess that were backed up for specified session
     #
-    def export_table_names(session_name, dest_root, table_name=nil)
+    def table_names(mode, session_name, dest_root, table_name=nil)
       if table_name && table_name.include?("%")
         conditions = ['table_name like ? AND session_name = ? AND dest_root = ?', table_name, session_name, dest_root]
       else
         conditions = ['session_name = ? AND dest_root = ?', session_name, dest_root]
       end
-      results = ExportedHbaseTable.select(:all, :conditions => conditions).collect do |t|
+      
+      klass = {:export => ExportedHbaseTable, :import => ImportedHbaseTable}
+      results = klass[mode].select(:all, :conditions => conditions).collect do |t|
         t.reload
         t[:table_name]
       end
@@ -141,13 +131,15 @@ module Hbacker
     #   % can be used as a wildcard at begining and/or end
     # @return [Array<Hash>] List of table info that were backed up for specified session
     #
-    def export_table_info(session_name, dest_root, table_name=nil)
+    def table_info(mode, session_name, dest_root, table_name=nil)
       if table_name && table_name.include?("%")
         conditions = ['table_name like ? AND session_name = ? AND dest_root = ?', table_name, session_name, dest_root]
       else
         conditions = ['session_name = ? AND dest_root = ?', session_name, dest_root]
       end
-      results = ExportedHbaseTable.select(:all, :conditions => conditions).collect do |t|
+      
+      klass = {:export => ExportedHbaseTable, :import => ImportedHbaseTable}
+      results = klass[mode].select(:all, :conditions => conditions).collect do |t|
         t.reload
         t.attributes
       end
@@ -156,12 +148,13 @@ module Hbacker
     ##
     # Get the Attributes of an HBase table previously recorded ColumnDescriptor Opts
     # @param [String] table_name The name of the HBase table 
-    # @param (see #export_table_names)
+    # @param (see #table_names)
     # @return [Hash] The hash of attributes found
     #
-    def column_descriptors(table_name, session_name, dest_root)
+    def column_descriptors(mode, table_name, session_name, dest_root)
       results = {}
-      ExportedColumnDescriptor.find_all_by_session_name_and_dest_root_and_table_name(session_name, dest_root, table_name).each do |t|
+      klass = {:export => ExportedColumnDescriptor, :import => ImportedColumnDescriptor}
+      klass[mode].find_all_by_session_name_and_dest_root_and_table_name(session_name, dest_root, table_name).each do |t|
         t.reload
         t.each_pair do |k,v|
           results.merge(k.to_sym => v) if Stargate::Model::ColumnDescriptor.AVAILABLE_OPTS[k]
@@ -175,7 +168,7 @@ module Hbacker
     #   % can be used as a wildcard at begining and/or end
     # @return [Array<Hash>] List of export info that were backed up for specified session
     #
-    def export_info(session_name)
+    def session_info(mode, session_name)
       if session_name && session_name.include?("%")
         conditions = {:conditions  => ["session_name like ?", session_name]}
       elsif session_name
@@ -183,9 +176,10 @@ module Hbacker
       else
         conditions = nil
       end
-      ExportSession.select(:all, conditions).collect do |export_info|
-        export_info.reload
-        export_info.attributes
+      klass = {:export => ExportSession, :import => ImportSession}
+      klass[mode].select(:all, conditions).collect do |session_info|
+        session_info.reload
+        session_info.attributes
       end
     end
     
@@ -198,7 +192,7 @@ module Hbacker
         # (cluster_name specifies the HBase Cluster backed up)
         # One record per export session
         Object::const_set('ExportSession',  Class.new(RightAws::ActiveSdb::Base) do
-          set_domain_name "export_info"
+          set_domain_name "session_info"
           columns do
             cluster_name
             session_name
