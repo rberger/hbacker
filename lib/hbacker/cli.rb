@@ -71,7 +71,7 @@ module Hbacker
       :default => now_minus_60_sec, 
       :aliases => "-s", 
       :desc => "End time (millisecs since Unix Epoch)"
-    method_option :backup_name, 
+    method_option :session_name, 
       :default => @@backup_timestamp,
       :type => :string,
       :desc => "String to select the backup session. Exp: 20110327_224341",
@@ -147,7 +147,7 @@ module Hbacker
       :banner => "s3 | s3n | hdfs | file"
     method_option :pattern, 
       :type => :string, 
-      :desc => "SQL Wildcard (%) for the table name within the Source scheme://path/backup_name/ Exp: %summary%"
+      :desc => "SQL Wildcard (%) for the table name within the Source scheme://path/session_name/ Exp: %summary%"
     method_option :tables, 
       :type => :array, 
       :aliases => "-t", 
@@ -161,7 +161,7 @@ module Hbacker
       :default => now_minus_60_sec, 
       :aliases => "-s", 
       :desc => "End time (millisecs since Unix Epoch)"
-    method_option :backup_name, 
+    method_option :session_name, 
       :default => @@backup_timestamp,
       :type => :string,
       :desc => "String to select the backup session. Exp: 20110327_224341",
@@ -218,7 +218,7 @@ module Hbacker
 
     desc "db", "Query Backup Meta Info DB"
     long_desc "Support functions to allow querying of the DB used to maintain information about backups" +
-    "Options backup_name and table_name allow the use of % for a wildcard at beginning and/or end"
+    "Options session_name and table_name allow the use of % for a wildcard at beginning and/or end"
     method_option :hbase_host, 
       :type => :string, 
       :default => "hbase-master0-staging.runa.com", 
@@ -230,7 +230,7 @@ module Hbacker
       :desc => "Optional. Used to limit which tables will be displayed " +
         "Exp: %staging_consumer_events%",
       :banner => "STRING"
-    method_option :backup_name, 
+    method_option :session_name, 
       :type => :string,
       :desc => "String to select the backup session. Exp: 20110327_%",
       :banner => "STRING"
@@ -247,22 +247,22 @@ module Hbacker
       # Hbacker.log.debug "db: #{db.inspect} config:"
       # pp config if options[:debug]
       
-      backup_name = options[:backup_name]
+      session_name = options[:session_name]
       table_name = options[:table_name]
       dest_root = options[:dest_root]
       
-      backups = db.backup_info(backup_name)
+      backups = db.backup_info(session_name)
       
       backups.each do |backup|
-        backup_name = backup['backup_name'].first
+        session_name = backup['session_name'].first
         attributes_string = ""
         backup.each_pair do |k,v|
-          next if %w(backup_name id).include?(k)
+          next if %w(session_name id).include?(k)
           attributes_string += "#{k}: #{backup[k]} "
         end
-        puts "#{backup_name}: #{attributes_string}"
+        puts "#{session_name}: #{attributes_string}"
         if table_name
-          tables = db.table_info(backup_name, dest_root, table_name)
+          tables = db.backup_table_info(session_name, dest_root, table_name)
           tables.each do |table|
             attributes_string = ""
             table.each_pair do |k,v|

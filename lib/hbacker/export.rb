@@ -37,39 +37,43 @@ module Hbacker
     # @param [Hash] opts Hash from the CLI with all the options set
     #
     def specified_tables(opts)
-      Hbacker.log.debug "Export#specified_tables"
-      opts = Hash.transform_keys_to_symbols(opts)
+      begin
+        Hbacker.log.debug "Export#specified_tables"
+        opts = Hash.transform_keys_to_symbols(opts)
 
-      @db.record_backup_start(opts[:backup_name], opts[:dest_root], opts[:start], opts[:end], Time.now.utc)
-      opts[:tables].each do |table_name|
+        @db.backup_start_info(opts[:session_name], opts[:dest_root], opts[:start], opts[:end], Time.now.utc)
+        opts[:tables].each do |table_name|
         
-        dest = "#{opts[:dest_root]}#{opts[:backup_name]}/#{table_name}/"
+          dest = "#{opts[:dest_root]}#{opts[:session_name]}/#{table_name}/"
         
-        wait_results = wait_for_hbacker_queue('queue_table_export_job', opts[:workers_watermark], opts[:workers_timeout])
-        unless wait_results[:ok]
-          msg = "Hbacker::Export#specified_tables: Timeout (#{opts[:workers_timeout]}) " +
-            " waiting for workers in queue < opts[:workers_timeout]"
-          Hbacker.log.error msg
-          raise Timeout::Error, msg
+          wait_results = wait_for_hbacker_queue('queue_table_export_job', opts[:workers_watermark], opts[:workers_timeout])
+          unless wait_results[:ok]
+            msg = "Hbacker::Export#specified_tables: Timeout (#{opts[:workers_timeout]}) " +
+              " waiting for workers in queue < opts[:workers_timeout]"
+            Hbacker.log.error msg
+            raise Timeout::Error, msg
+          end
+        
+          Hbacker.log.debug "Calling queue_table_export_job(#{table_name}, #{opts[:start]}, "+
+            "#{opts[:end]}, #{dest}, #{opts[:versions]}, #{opts[:session_name]})"
+          self.queue_table_export_job(table_name, opts[:start], opts[:end], dest, opts[:versions], 
+            opts[:session_name], opts[:timeout])
         end
-        
-        Hbacker.log.debug "Calling queue_table_export_job(#{table_name}, #{opts[:start]}, "+
-          "#{opts[:end]}, #{dest}, #{opts[:versions]}, #{opts[:backup_name]})"
-        self.queue_table_export_job(table_name, opts[:start], opts[:end], dest, opts[:versions], 
-          opts[:backup_name], opts[:timeout])
+      rescue Exception => exception
+        Hbacker.log.error "Hbacker::Export#specified_tables: EXCEPTION: #{e}"
       end
     end
     
     ##
     # Queue a ruby job to manage the Hbase/Hadoop job
-    def queue_table_export_job(table_name, start_time, end_time, destination, versions, backup_name, timeout)
+    def queue_table_export_job(table_name, start_time, end_time, destination, versions, session_name, timeout)
       args = {
         :table_name => table_name,
         :start_time => start_time,
         :end_time => end_time,
         :destination => destination,
         :versions => versions,
-        :backup_name => backup_name,
+        :session_name => session_name,
         :stargate_url => @hbase.url,
         :aws_access_key_id => @db.aws_access_key_id,
         :aws_secret_access_key => @db.aws_secret_access_key,
@@ -94,11 +98,11 @@ module Hbacker
     # @param [Integer] end_time Latest Time to backup to (milliseconds since Unix Epoch)
     # @param [String] destination Full scheme://path for destination. Suitable for use with HBase/HDFS
     # @param [Integer] versions Number of versions to backup
-    # @param [String] backup_name Name of the Backup Session
+    # @param [String] session_name Name of the Backup Session
     # @todo Check if table is empty, if so don't do hadoop job, just create the target directory and record in Db
     # @todo Make sure table is compacted before backup
     #
-    def table(table_name, start_time, end_time, destination, versions, backup_name)
+    def table(table_name, start_time, end_time, destination, versions, session_name)
       table_descriptor = @hbase.table_descriptor(table_name)
       
       cmd = "#{@hadoop_home}/bin/hadoop jar #{@hbase_home}/hbase-#{@hbase_version}.jar export " +
@@ -110,13 +114,13 @@ module Hbacker
       if $?.exitstatus > 0
         Hbacker.log.error"Hadoop command failed:"
         Hbacker.log.error cmd_output
-        @db.record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name, false, true)
+        @db.table_backup_info(table_name, start_time, end_time, table_descriptor, versions, session_name, false, true)
         Hbacker.log.debug "About to save_info to s3: #{destination}hbacker_hadoop_error.log"
         @s3.save_info("#{destination}hbacker_hadoop_error.log", cmd_output)
         raise StandardError, "Error running Haddop Command", caller
       end
       
-      @db.record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name, false, false)
+      @db.table_backup_info(table_name, start_time, end_time, table_descriptor, versions, session_name, false, false)
       Hbacker.log.debug "About to save_info to s3: #{destination}hbacker_hadoop.log"
       @s3.save_info("#{destination}hbacker_hadoop.log", cmd_output)
     end

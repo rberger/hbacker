@@ -10,7 +10,7 @@ module Worker
   # @option [Integer] :end_time Latest Time to backup to (milliseconds since Unix Epoch)
   # @option [String] :destination Full scheme://path for destination. Suitable for use with HBase/HDFS
   # @option [Integer] :versions Number of versions to backup
-  # @option [String] :backup_name Name of the Backup Session
+  # @option [String] :session_name Name of the Backup Session
   # @option [String] :stargate_url Full Schema/Path:Port URL to access the HBase stargate server
   # @option [String] :aws_access_key_id AWS key
   # @option [String] :aws_secret_access_key AWS secret
@@ -52,11 +52,11 @@ module Worker
         raise Exception, "Timedout waiting #{10000 *2} seconds for Hadoop Map Reduce Queue to be less than #{opts[:mapred_max_jobs]} jobs"
       end
       Hbacker.log.info "Backing up #{table_name} to #{dest}"
-      export.table(table_name, start_time, end_time, destination, versions, backup_name)
+      export.table(table_name, start_time, end_time, destination, versions, session_name)
     else
       table_descriptor = @hbase.table_descriptor(table_name)
       Hbacker.log.warn "Worker#queue_table_export: Table: #{table_name} is empty. Recording in Db but not backing up"
-      @db.record_table_info(table_name, start_time, end_time, table_descriptor,  versions, backup_name, true, false)
+      @db.table_backup_info(table_name, start_time, end_time, table_descriptor,  versions, session_name, true, false)
     end
 
   end

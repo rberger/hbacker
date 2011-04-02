@@ -25,7 +25,7 @@ describe Hbacker, "queue_table_export Stalker job" do
         :end_time => 1291233436567,
         :destination => "s3n://somebucket/#{@table_name}/",
         :versions => 100000,
-        :backup_name => "20110101_111111",
+        :session_name => "20110101_111111",
         :stargate_url => "http://example.com",
         :aws_access_key_id => 'aws_access_key_id',
         :aws_secret_access_key => 'aws_secret_access_key',
@@ -49,7 +49,7 @@ describe Hbacker, "queue_table_export Stalker job" do
     it "should build a proper Hbacker::Export#table command" do
 
       @export_mock.should_receive(:table).with(@args[:table_name], @args[:start_time], @args[:end_time], @args[:destination], 
-        @args[:versions], @args[:backup_name])
+        @args[:versions], @args[:session_name])
       
       # This require evaluates the worker job using the module Stalker definition of job
       
