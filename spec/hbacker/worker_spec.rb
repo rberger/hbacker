@@ -33,24 +33,45 @@ describe Hbacker, "queue_table_export Stalker job" do
         :hbase_host => 'hbase-master0-production.runa.com',
         :hbase_port => 8888,
         :hbase_home => "/mnt/hbase",
-        :hadoop_home =>"/mnt/hadoop"
+        :hadoop_home =>"/mnt/hadoop",
+        :hbase_version => '0.20.3',
+        :mapred_max_jobs => 10
       }
     end
     
     before :each do
       # Can not do mocks in before :all
       @hbase_mock = mock('@hbase_mock')
+      @hbase_mock.stub(:table_has_rows?).and_return(true)
+      @table_descriptor = mock('@table_descriptor')
+      @hbase_mock.stub(:wait_for_mapred_queue).and_return(:ok)
+      @hbase_mock.stub(:table_descriptor).and_return(@table_descriptor)
+      Hbacker::Hbase.stub(:new).and_return(@hbase_mock)
+      @s3_mock = mock('@s3_mock')
+      Hbacker::S3.stub(:new).and_return(@s3_mock)
       @db_mock = mock('@db_mock')
       Hbacker::Db.stub(:new).and_return(@db_mock)
       @export_mock = mock('@export_mock')
       Hbacker::Export.stub(:new).and_return(@export_mock)
     end
 
-    it "should build a proper Hbacker::Export#table command" do
+    it "should build a proper Hbacker::Export#table command when table not empty" do
 
-      @export_mock.should_receive(:table).with(@args[:table_name], @args[:start_time], @args[:end_time], @args[:destination], 
-        @args[:versions], @args[:session_name])
+      @export_mock.should_receive(:table).with(@args[:table_name], @args[:start_time], 
+        @args[:end_time], @args[:destination], @args[:versions], @args[:session_name])
       
+      # This require evaluates the worker job using the module Stalker definition of job
+      
+      require File.expand_path(File.join(File.dirname(__FILE__), "../../", "lib", "worker"))  
+      Stalker.handler['queue_table_export'].call(@args)
+    end
+
+    it "should build a proper Hbacker::Db#table_info command when table is empty" do
+      @hbase_mock.stub(:table_has_rows?).and_return(false)
+
+      @db_mock.should_receive(:table_info).with(:export, @args[:table_name], 
+        @args[:start_time], @args[:end_time], @table_descriptor, @args[:versions], 
+        @args[:session_name], true, false)
       # This require evaluates the worker job using the module Stalker definition of job
       
       require File.expand_path(File.join(File.dirname(__FILE__), "../../", "lib", "worker"))  

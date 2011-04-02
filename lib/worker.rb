@@ -45,18 +45,18 @@ module Worker
     s3 = Hbacker::S3.new(aws_access_key_id, aws_secret_access_key)
     export = Hbacker::Export.new(hbase, db, hbase_home, hbase_version, hadoop_home, s3)
     
-    has_rows = @hbase.table_has_rows?(table_name)
+    has_rows = hbase.table_has_rows?(table_name)
       
     if has_rows
-      if @hbase.wait_for_mapred_queue(opts[:mapred_max_jobs], 10000, 2) != :ok
+      if hbase.wait_for_mapred_queue(mapred_max_jobs, 10000, 2) != :ok
         raise Exception, "Timedout waiting #{10000 *2} seconds for Hadoop Map Reduce Queue to be less than #{opts[:mapred_max_jobs]} jobs"
       end
-      Hbacker.log.info "Backing up #{table_name} to #{dest}"
+      Hbacker.log.info "Backing up #{table_name} to #{destination}"
       export.table(table_name, start_time, end_time, destination, versions, session_name)
     else
-      table_descriptor = @hbase.table_descriptor(table_name)
+      table_descriptor = hbase.table_descriptor(table_name)
       Hbacker.log.warn "Worker#queue_table_export: Table: #{table_name} is empty. Recording in Db but not backing up"
-      @db.table_info(:export, table_name, start_time, end_time, table_descriptor,  versions, session_name, true, false)
+      db.table_info(:export, table_name, start_time, end_time, table_descriptor,  versions, session_name, true, false)
     end
 
   end

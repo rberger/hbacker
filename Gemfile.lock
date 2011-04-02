@@ -35,9 +35,9 @@ GEM
     json (1.5.1)
     json_pure (1.5.1)
     rake (0.8.7)
-    right_aws (2.0.0)
-      right_http_connection (>= 1.2.1)
-    right_http_connection (1.2.4)
+    right_aws (2.1.0)
+      right_http_connection (>= 1.2.5)
+    right_http_connection (1.3.0)
     rspec (2.5.0)
       rspec-core (~> 2.5.0)
       rspec-expectations (~> 2.5.0)
@@ -46,7 +46,7 @@ GEM
     rspec-expectations (2.5.0)
       diff-lcs (~> 1.1.2)
     rspec-mocks (2.5.0)
-    stalker (0.8.1)
+    stalker (0.8.0)
       beanstalk-client
       json_pure
     term-ansicolor (1.0.5)
