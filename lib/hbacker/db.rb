@@ -2,68 +2,7 @@ module Hbacker
   require "right_aws"
   require "sdb/active_sdb"
   require "hbacker"
-  
-  class TableBackup < RightAws::ActiveSdb::Base
-    columns do
-      table_name
-      start_time  :Integer
-      end_time  :Integer
-      specified_versions :Integer
-      backup_name
-      empty :Boolean
-      error :Boolean
-      created_at :DateTime, :default => lambda{ Time.now.utc }
-      updated_at :DateTime
-    end
-  end
-  
-  class TableFamlies < RightAws::ActiveSdb::Base
-    columns do
-      table_name
-      name
-      max_versions :Integer
-      versions :Integer
-      compression
-      in_memory :Boolean
-      block_cache :Boolean
-      blockcache :Boolean
-      blocksize :Integer
-      length :Integer
-      ttl :Integer
-      bloomfilter
-      created_at :DateTime, :default => lambda{ Time.now.utc }
-      updated_at :DateTime
-    end
-  end
-  
-  class Backup < RightAws::ActiveSdb::Base
-    columns do
-      backup_name
-      specified_start :Integer
-      specified_end :Integer
-      started_at :DateTime
-      ended_at :DateTime
-      dest_root
-      cluster_namee
-      created_at :DateTime, :default => lambda{ Time.now.utc }
-      updated_at :DateTime
-    end
-  end
-  
-  class Restore < RightAws::ActiveSdb::Base
-    columns do
-      restore_name
-      specified_start :Integer
-      specified_end :Integer
-      started_at :DateTime
-      ended_at :DateTime
-      source_root
-      cluster_namee
-      created_at :DateTime, :default => lambda{ Time.now.utc }
-      updated_at :DateTime
-    end
-  end
-  
+
   class Db
     attr_reader :aws_access_key_id, :aws_secret_access_key, :hbase_name, 
                 :backup_info_class, :hbase_table_info_class
@@ -79,19 +18,15 @@ module Hbacker
       @aws_secret_access_key =aws_secret_access_key
       @hbase_name = hbase_name
       
-      # This seems to be the only way to dynmaically set the domain name
-      @hbase_table_backup_class = Class.new(TableBackup) { set_domain_name "#{hbase_name}_table_backup" }
-      @hbase_table_families_class = Class.new(TableFamlies) { set_domain_name "#{hbase_name}_table_families" }
-      # And had to do BackupInfo this way as the right_aws library was trying to use Hbacker::BackupInfo 
-      @backup_info_class =  Class.new(BackupInfo) { set_domain_name "backup_info" }
+      create_table_classes
       
       # connect to SDB
       RightAws::ActiveSdb.establish_connection(aws_access_key_id, aws_secret_access_key, :logger => Hbacker.log)
 
       # Creating a domain is idempotent. Its easier to try to create than to check if it already exists
-      @hbase_table_backup_class.create_domain
-      @hbase_table_families_class.create_domain
-      @backup_info_class.create_domain
+      @hbase_table_backup.create_domain
+      @hbase_table_families.create_domain
+      @backup_info.create_domain
     end
     
     # Records HBase Table Info into SimpleDB table
@@ -104,6 +39,14 @@ module Hbacker
     #
     def record_table_info(table_name, start_time, end_time, table_descriptor, versions, backup_name, empty, error=false)
       now = Time.now.utc
+      table_backup_info = {
+        :table_name => table_name, 
+        :backup_name => backup_name,
+        :empty => empty.inspect,
+        :error => error.inspect,
+        :specified_versions => versions,
+        :updated_at => now
+      }
       table_descriptor.column_families_to_hashes.each do |column|
         added_info = {
           :table_name => table_name, 
@@ -111,16 +54,6 @@ module Hbacker
           :updated_at => now
         }
         
-        table_backup_info = {
-          :table_name => table_name, 
-          :backup_name => backup_name,
-          :start_time => start_time, 
-          :end_time => end_time,
-          :empty => empty.inspect,
-          :error => error.inspect,
-          :specified_versions => versions,
-          :updated_at => Time.now.utc
-        }
         # ActiveSdb doesn't seem to be handling booleans right so we convert them to strings
         column_info = column.inject({}) do  |h, (k, v)|
           if v.nil?
@@ -135,7 +68,7 @@ module Hbacker
         # Hbacker.log.debug "column: #{column.inspect}"
         # Hbacker.log.debug "added_info: #{added_info.inspect}"
         # Hbacker.log.debug "saved_info: #{info.inspect}"
-        @hbase_table_backup_class.create(info)
+        @hbase_table_families.create(info)
       end
     end
   
@@ -148,7 +81,7 @@ module Hbacker
     # @param [Time] session_started_at When the backup started
     #
     def record_backup_start(backup_name, dest_root, specified_start, specified_end, session_started_at)
-      @backup_info_class.create(
+      @backup_info.create(
         {
           :backup_name => backup_name, 
           :specified_start => specified_start,
@@ -167,7 +100,7 @@ module Hbacker
     # @param [String] dest_root The scheme and root path of where the backup is put
     #
     def record_backup_end(backup_name, dest_root, ended_at)
-      info = @backup_info_class.find_by_name_and_dest_root(backup_name, dest_root)
+      info = @backup_info.find_by_name_and_dest_root(backup_name, dest_root)
       info.reload
       info[:ended_at] = ended_at
       info[:updated_at] = Time.now.utc
@@ -240,10 +173,84 @@ module Hbacker
       else
         conditions = nil
       end
-      @backup_info_class.select(:all, conditions).collect do |backup_info|
+      @backup_info.select(:all, conditions).collect do |backup_info|
         backup_info.reload
         backup_info.attributes
       end
     end
+    
+    private
+    def create_table_classes
+      # This seems to be the only way to dynmaically set the domain name
+      @hbase_table_backup = Class.new(RightAws::ActiveSdb::Base) do
+        set_domain_name "#{hbase_name}_table_backup"
+        columns do
+          table_name
+          start_time  :Integer
+          end_time  :Integer
+          specified_versions :Integer
+          backup_name
+          empty :Boolean
+          error :Boolean
+          created_at :DateTime, :default => lambda{ Time.now.utc }
+          updated_at :DateTime
+        end
+      end
+
+      @hbase_table_families = Class.new(RightAws::ActiveSdb::Base) do
+        set_domain_name "#{hbase_name}_table_families"
+        columns do
+          backup_name
+          table_name
+          name
+          max_versions :Integer
+          versions :Integer
+          compression
+          in_memory :Boolean
+          block_cache :Boolean
+          blockcache :Boolean
+          blocksize :Integer
+          length :Integer
+          ttl :Integer
+          bloomfilter
+          created_at :DateTime, :default => lambda{ Time.now.utc }
+          updated_at :DateTime
+        end
+      end
+      
+      # Info related to a backup session for a cluster
+      @backup_info =  Class.new(RightAws::ActiveSdb::Base) do
+        set_domain_name "backup_info"
+        columns do
+          backup_name
+          specified_start :Integer
+          specified_end :Integer
+          started_at :DateTime
+          ended_at :DateTime
+          dest_root
+          cluster_name
+          created_at :DateTime, :default => lambda{ Time.now.utc }
+          updated_at :DateTime
+        end
+      end
+      
+      # Info related to a restore session for a cluster
+      @restore_info =  Class.new(RightAws::ActiveSdb::Base) do
+        set_domain_name "restore_info"
+        columns do
+          restore_name
+          specified_start :Integer
+          specified_end :Integer
+          started_at :DateTime
+          ended_at :DateTime
+          source_root
+          cluster_name
+          created_at :DateTime, :default => lambda{ Time.now.utc }
+          updated_at :DateTime
+        end
+      end
+    end
+    
+    
   end
 end

@@ -1,0 +1,121 @@
+#!/usr/bin/env ruby
+
+require "rubygems"
+require "right_aws"
+require "sdb/active_sdb"
+require "yaml"
+require "pp"
+
+class FooInfo < RightAws::ActiveSdb::Base
+  columns do
+    mykey
+    test_bool :Boolean
+    test_date :DateTime
+    test_date_utc :DateTime
+    created_at_utc :DateTime, :default => lambda{ Time.now.utc }
+    created_at :DateTime, :default => lambda{ Time.now }
+  end
+end
+class Db
+  attr_reader :aws_access_key_id, :aws_secret_access_key, :mtest_info_class
+  def initialize
+    config = YAML.load_file(File.expand_path('~/.aws/aws_config.yml'))
+    @aws_access_key_id = config['access_key_id']
+    @aws_secret_access_key = config['secret_access_key']
+
+    create_tables
+    
+    RightAws::ActiveSdb.establish_connection
+
+    MtestInfo.create_domain
+  end
+  
+  def create_tables
+    Object::const_set('MtestInfo', Class.new(RightAws::ActiveSdb::Base) do
+      set_domain_name "mtest_info"
+      columns do
+        mykey
+        test_bool :Boolean
+        test_date :DateTime
+        test_date_utc :DateTime
+        created_at_utc :DateTime, :default => lambda{ Time.now.utc }
+        created_at :DateTime, :default => lambda{ Time.now }
+      end
+    end
+    )
+  end
+
+  def put_data(mykey, test_bool, test_date, test_date_utc)
+    info = {
+      :mykey => mykey,
+      :test_bool  => test_bool,
+      :test_date => test_date,
+      :test_date_utc => test_date_utc
+    }
+    MtestInfo.create(info)
+  end
+
+  def get_data(mykey)
+    puts "get_data(#{mykey})"
+    MtestInfo.find_all_by_mykey(mykey).each do |r|
+      r.reload
+      r
+    end
+  end
+end
+
+if __FILE__ == $0
+  puts "ARGV.length: #{ARGV.length} ARGV: #{ARGV.inspect}"
+  unless ARGV.length == 2 || ARGV.length == 3
+    puts "usage: testdb get|put mykey bool"
+    exit(-1)
+  end
+  now = Time.now
+  test_date = now
+  test_date_utc = now.utc
+
+  mode = ARGV[0]
+  mykey = ARGV[1]
+  test_bool_str = ARGV[1]
+
+  case test_bool_str
+  when "true"
+    test_bool = true
+  when "false"
+    test_bool = false
+  when "nil"
+    test_bool = nil
+  else
+    test_bool = true
+  end
+
+
+  db = Db.new()
+
+  if mode == "p" || mode == "put"
+    puts "Submitting to SimpleDB"
+    puts "mykey: #{mykey.inspect}"
+    puts "test_bool: #{test_bool.inspect}"
+    puts "test_date: #{test_date}.inspect"
+    puts "test_date_utc: #{test_date_utc.inspect}"
+
+    presults = db.put_data(mykey, test_bool, test_date, test_date_utc)
+
+    puts "put presults: #{presults.inspect}"
+  elsif  mode == "g" || mode == "get"
+    gresults = db.get_data(mykey)
+
+    puts "get it back:"
+  
+    gresults.each do |r|
+      puts "row:"
+      r.attributes.each_pair do |k,v|
+        puts "#{k}: #{v} inspect: #{v.inspect} class: #{v.class}"
+        puts "r[#{k}]: #{r[k]} r[#{k}].inspect: #{r[k].inspect} r[#{k}].class: #{r[k].class}"
+      end
+    end
+  else
+    puts "usage: testdb get|put mykey bool"
+    exit(-1)
+  end
+end
