@@ -1,10 +1,10 @@
 h1. HBacker
 
-Ruby Tool to Backup / Restore HBase to S3, HDFS or local file system.
+Ruby Tool to Export / Import HBase to S3, HDFS or local file system.
 
 *THIS IS UNDER CONSTRUCTION*
 
-See doc/Proposed_HBase_Backup_using_HBASE-1684.txt for the plan
+See doc/Proposed_HBase_Export_using_HBASE-1684.txt for the plan
 
 h2. Dependencies
 

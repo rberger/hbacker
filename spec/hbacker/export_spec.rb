@@ -16,7 +16,7 @@ describe Hbacker::Export, "table" do
     @hbase_mock = mock('@hbase_mock')
     @hbase_mock.stub(:table_descriptor).with(@table_name)
     @db_mock = mock('@db_mock')
-    @db_mock.stub(:table_backup_info)
+    @db_mock.stub(:table_info)
     Hbacker::Db.stub(:new).and_return(@db_mock)
     @s3_mock = mock('@s3_mock')
     @s3_mock.stub(:save_info)

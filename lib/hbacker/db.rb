@@ -21,32 +21,41 @@ module Hbacker
       RightAws::ActiveSdb.establish_connection(aws_access_key_id, aws_secret_access_key, :logger => Hbacker.log)
 
       # Creating a domain is idempotent. Its easier to try to create than to check if it already exists
-      BackupSession.create_domain
-      BackedupHbaseTable.create_domain
-      BackedupColumnDescriptor.create_domain
-      RestoreSession.create_domain
-      RestoredHbaseTable.create_domain
-      RestoredHColumnDescriptors.create_domain
+      ExportSession.create_domain
+      ExportedHbaseTable.create_domain
+      ExportedColumnDescriptor.create_domain
+      ImportSession.create_domain
+      ImportedHbaseTable.create_domain
+      ImportedHColumnDescriptors.create_domain
     end
     
     # Records HBase Table Info into SimpleDB table
     # @param [String] table_name Name of the HBase Table
-    # @param [Integer] start_time Earliest Time to backup from (milliseconds since Unix Epoch)
-    # @param [Integer] end_time Latest Time to backup to (milliseconds since Unix Epoch)
+    # @param [Integer] start_time Earliest Time to export from (milliseconds since Unix Epoch)
+    # @param [Integer] end_time Latest Time to export to (milliseconds since Unix Epoch)
     # @param [Stargate::Model::TableDescriptor] table_descriptor Schema of the HBase Table
-    # @param [Integer] versions Max number of row/cell versions to backup
-    # @param [String] session_name Name (usually the date_time_stamp) of the backup session
+    # @param [Integer] versions Max number of row/cell versions to export
+    # @param [String] session_name Name (usually the date_time_stamp) of the export session
     #
-    def table_backup_info(table_name, start_time, end_time, table_descriptor, versions, session_name, empty, error=false)
+    def table_info(mode, table_name, start_time, end_time, table_descriptor, versions, session_name, empty, error=false)
       now = Time.now.utc
-      table_backup_info = {
+      table_info = {
         :table_name => table_name, 
         :session_name => session_name,
-        :empty => empty.inspect,
-        :error => error.inspect,
+        :empty => empty,
+        :error => error,
         :specified_versions => versions,
         :updated_at => now
       }
+      case mode
+      when :export
+        ExportedHbaseTable.create(table_info)
+      when :import
+        ImportedHbaseTable.create(table_info)
+      else
+        Hbacker.log.error "Hbacker::Db#table_info: Invalid mode: #{mode.inspect}"
+      end
+      
       table_descriptor.column_families_to_hashes.each do |column|
         added_info = {
           :table_name => table_name, 
@@ -58,20 +67,28 @@ module Hbacker
         # Hbacker.log.debug "column: #{column.inspect}"
         # Hbacker.log.debug "added_info: #{added_info.inspect}"
         # Hbacker.log.debug "saved_info: #{info.inspect}"
-        BackedupColumnDescriptor.create(info)
+        ExportedColumnDescriptor.create(info)
+        case mode
+        when :export
+          ExportedColumnDescriptor.create(info)
+        when :import
+          ImportedColumnDescriptor.create(info)
+        else
+          Hbacker.log.error "Hbacker::Db#table_info: Invalid mode: #{mode.inspect}"
+        end
       end
     end
   
-    # Records the begining of a backup session
-    # @param [String] session_name Name (usually the date_time_stamp) of the backup session
-    # @param [String] dest_root The scheme and root path of where the backup is put
+    # Records the begining of a export session
+    # @param [String] session_name Name (usually the date_time_stamp) of the export session
+    # @param [String] dest_root The scheme and root path of where the export is put
     # @param [Integer] specified_start The start_time of the earliest record to be backed up.
-    #   Value of 0 means its a full backup
+    #   Value of 0 means its a full export
     # @param [Integer] specified_end End time of the last record to be backed up
-    # @param [Time] session_started_at When the backup started
+    # @param [Time] session_started_at When the export started
     #
-    def backup_start_info(session_name, dest_root, specified_start, specified_end, session_started_at)
-      BackupSession.create(
+    def export_start_info(session_name, dest_root, specified_start, specified_end, session_started_at)
+      ExportSession.create(
         {
           :session_name => session_name, 
           :specified_start => specified_start,
@@ -84,14 +101,14 @@ module Hbacker
       )
     end
   
-    # Records the end of a backup session (Updates existing record)
-    # @param [String] session_name Name (usually the date_time_stamp) of the backup session
-    # @param [Time] ended_at When the backup ended
-    # @param [String] dest_root The scheme and root path of where the backup is put
+    # Records the end of a export session (Updates existing record)
+    # @param [String] session_name Name (usually the date_time_stamp) of the export session
+    # @param [Time] ended_at When the export ended
+    # @param [String] dest_root The scheme and root path of where the export is put
     #
-    def backup_end_info(session_name, dest_root, ended_at, error=nil, error_info=nil)
+    def export_end_info(session_name, dest_root, ended_at, error=nil, error_info=nil)
       now = Time.now.utc
-      info = BackupSession.find_by_name_and_dest_root(session_name, dest_root)
+      info = ExportSession.find_by_name_and_dest_root(session_name, dest_root)
       info.reload
       info[:error] = error if error
       info[:error_info] = error_info if error_info
@@ -101,36 +118,36 @@ module Hbacker
     end
   
     # Returns a list of names of tables backed up during the specified session
-    # @param [String] session_name Name (usually the date_time_stamp) of the backup session
-    # @param [String] dest_root The scheme and root path of where the backup is put
+    # @param [String] session_name Name (usually the date_time_stamp) of the export session
+    # @param [String] dest_root The scheme and root path of where the export is put
     # @return [Array<String>] List of table namess that were backed up for specified session
     #
-    def backup_table_names(session_name, dest_root, table_name=nil)
+    def export_table_names(session_name, dest_root, table_name=nil)
       if table_name && table_name.include?("%")
         conditions = ['table_name like ? AND session_name = ? AND dest_root = ?', table_name, session_name, dest_root]
       else
         conditions = ['session_name = ? AND dest_root = ?', session_name, dest_root]
       end
-      results = BackedupHbaseTable.select(:all, :conditions => conditions).collect do |t|
+      results = ExportedHbaseTable.select(:all, :conditions => conditions).collect do |t|
         t.reload
         t[:table_name]
       end
     end
     
     # Returns a list of info for tables backed up during the specified session
-    # @param [String] session_name Name (usually the date_time_stamp) of the backup session
-    # @param [String] dest_root The scheme and root path of where the backup is put
+    # @param [String] session_name Name (usually the date_time_stamp) of the export session
+    # @param [String] dest_root The scheme and root path of where the export is put
     # @param [String] table_name If specified, only the table name selected will be returnd.
     #   % can be used as a wildcard at begining and/or end
     # @return [Array<Hash>] List of table info that were backed up for specified session
     #
-    def backup_table_info(session_name, dest_root, table_name=nil)
+    def export_table_info(session_name, dest_root, table_name=nil)
       if table_name && table_name.include?("%")
         conditions = ['table_name like ? AND session_name = ? AND dest_root = ?', table_name, session_name, dest_root]
       else
         conditions = ['session_name = ? AND dest_root = ?', session_name, dest_root]
       end
-      results = BackedupHbaseTable.select(:all, :conditions => conditions).collect do |t|
+      results = ExportedHbaseTable.select(:all, :conditions => conditions).collect do |t|
         t.reload
         t.attributes
       end
@@ -139,12 +156,12 @@ module Hbacker
     ##
     # Get the Attributes of an HBase table previously recorded ColumnDescriptor Opts
     # @param [String] table_name The name of the HBase table 
-    # @param (see #backup_table_names)
+    # @param (see #export_table_names)
     # @return [Hash] The hash of attributes found
     #
     def column_descriptors(table_name, session_name, dest_root)
       results = {}
-      BackedupColumnDescriptor.find_all_by_session_name_and_dest_root_and_table_name(session_name, dest_root, table_name).each do |t|
+      ExportedColumnDescriptor.find_all_by_session_name_and_dest_root_and_table_name(session_name, dest_root, table_name).each do |t|
         t.reload
         t.each_pair do |k,v|
           results.merge(k.to_sym => v) if Stargate::Model::ColumnDescriptor.AVAILABLE_OPTS[k]
@@ -153,12 +170,12 @@ module Hbacker
       results
     end
 
-    # Returns a list of info for backups for the specified session
-    # @param [String] session_name Name (usually the date_time_stamp) of the backup session
+    # Returns a list of info for exports for the specified session
+    # @param [String] session_name Name (usually the date_time_stamp) of the export session
     #   % can be used as a wildcard at begining and/or end
-    # @return [Array<Hash>] List of backup info that were backed up for specified session
+    # @return [Array<Hash>] List of export info that were backed up for specified session
     #
-    def backup_info(session_name)
+    def export_info(session_name)
       if session_name && session_name.include?("%")
         conditions = {:conditions  => ["session_name like ?", session_name]}
       elsif session_name
@@ -166,9 +183,9 @@ module Hbacker
       else
         conditions = nil
       end
-      BackupSession.select(:all, conditions).collect do |backup_info|
-        backup_info.reload
-        backup_info.attributes
+      ExportSession.select(:all, conditions).collect do |export_info|
+        export_info.reload
+        export_info.attributes
       end
     end
     
@@ -176,12 +193,12 @@ module Hbacker
     def create_table_classes
       # Dynmaically create Class so we can dynamically set the name of the "Domain" in SimpleDB
       
-        # Top level record of a backup session
-        # One SimpleDB table for all Backups 
+        # Top level record of a export session
+        # One SimpleDB table for all Exports 
         # (cluster_name specifies the HBase Cluster backed up)
-        # One record per backup session
-        Object::const_set('BackupSession',  Class.new(RightAws::ActiveSdb::Base) do
-          set_domain_name "backup_info"
+        # One record per export session
+        Object::const_set('ExportSession',  Class.new(RightAws::ActiveSdb::Base) do
+          set_domain_name "export_info"
           columns do
             cluster_name
             session_name
@@ -198,15 +215,15 @@ module Hbacker
         end
         )
 
-        # Top level record of a restore session
-        # One SimpleDB table for all Restores 
-        # (cluster_name specifies the HBase Cluster restored)
-        # One record per restore session
-        Object::const_set('RestoreSession',  Class.new(RightAws::ActiveSdb::Base) do
-          set_domain_name "restore_info"
+        # Top level record of an import session
+        # One SimpleDB table for all Imports 
+        # (cluster_name specifies the HBase Cluster imported)
+        # One record per import session
+        Object::const_set('ImportSession',  Class.new(RightAws::ActiveSdb::Base) do
+          set_domain_name "import_info"
           columns do
             cluster_name
-            restore_name
+            session_name
             source_root
             specified_start :Integer
             specified_end :Integer
@@ -222,9 +239,9 @@ module Hbacker
 
       # Records the status of each HBase Table backed up
       # There is a SimpleDb Domain for each HBase Cluster backed up
-      # Each row represents the state of an Hbase Table backup
-      Object::const_set('BackedupHbaseTable', Class.new(RightAws::ActiveSdb::Base) do
-        set_domain_name "backedup_#{hbase_name}_tables"
+      # Each row represents the state of an Hbase Table export
+      Object::const_set('ExportedHbaseTable', Class.new(RightAws::ActiveSdb::Base) do
+        set_domain_name "exported_#{hbase_name}_tables"
         columns do
           table_name
           session_name
@@ -243,8 +260,8 @@ module Hbacker
       # There is a SimpleDb Domain forfor each HBase Cluster backed up
       # Each row represents a Column Family of an HBase Table
       # There can be multple rows (multiple Column Families) for each HBase Table
-      Object::const_set('BackedupColumnDescriptor', Class.new(RightAws::ActiveSdb::Base) do
-        set_domain_name "backedup_#{hbase_name}_column_descriptors"
+      Object::const_set('ExportedColumnDescriptor', Class.new(RightAws::ActiveSdb::Base) do
+        set_domain_name "exported_#{hbase_name}_column_descriptors"
         columns do
           session_name
           table_name
@@ -265,11 +282,11 @@ module Hbacker
       end
       )
       
-      # Records the status of each HBase Table restored
-      # There is a SimpleDb Domain for each HBase Cluster restored
-      # Each row represents the state of an Hbase Table restore
-      Object::const_set('RestoredHbaseTable', Class.new(RightAws::ActiveSdb::Base) do
-        set_domain_name "restored_#{hbase_name}_tables"
+      # Records the status of each HBase Table imported
+      # There is a SimpleDb Domain for each HBase Cluster imported
+      # Each row represents the state of an Hbase Table import
+      Object::const_set('ImportedHbaseTable', Class.new(RightAws::ActiveSdb::Base) do
+        set_domain_name "imported_#{hbase_name}_tables"
         columns do
           table_name
           session_name
@@ -284,12 +301,12 @@ module Hbacker
       end
       )
 
-      # Records Column Family Descriptions for each Table restored
-      # There is a SimpleDb Domain forfor each HBase Cluster restored
+      # Records Column Family Descriptions for each Table imported
+      # There is a SimpleDb Domain forfor each HBase Cluster imported
       # Each row represents a Column Family of an HBase Table
       # There can be multple rows (multiple Column Families) for each HBase Table
-      Object::const_set('RestoredColumnDescriptor', Class.new(RightAws::ActiveSdb::Base) do
-        set_domain_name "restored_#{hbase_name}_column_descriptors"
+      Object::const_set('ImportedColumnDescriptor', Class.new(RightAws::ActiveSdb::Base) do
+        set_domain_name "imported_#{hbase_name}_column_descriptors"
         columns do
           session_name
           table_name

@@ -6,15 +6,15 @@ module Worker
   # Stalker Job to do the work of starting a Hadoop Job to export an HBase Table
   # @param [Hash] args
   # @option [String] :table_name
-  # @option [Integer] :start_time Earliest Time to backup from (milliseconds since Unix Epoch)
-  # @option [Integer] :end_time Latest Time to backup to (milliseconds since Unix Epoch)
+  # @option [Integer] :start_time Earliest Time to export from (milliseconds since Unix Epoch)
+  # @option [Integer] :end_time Latest Time to export to (milliseconds since Unix Epoch)
   # @option [String] :destination Full scheme://path for destination. Suitable for use with HBase/HDFS
-  # @option [Integer] :versions Number of versions to backup
-  # @option [String] :session_name Name of the Backup Session
+  # @option [Integer] :versions Number of versions to export
+  # @option [String] :session_name Name of the Export Session
   # @option [String] :stargate_url Full Schema/Path:Port URL to access the HBase stargate server
   # @option [String] :aws_access_key_id AWS key
   # @option [String] :aws_secret_access_key AWS secret
-  # @option [String] :hbase_name Canonicalized HBase Cluster Name of the Backup source
+  # @option [String] :hbase_name Canonicalized HBase Cluster Name of the Export source
   # @option [String] :hbase_host HBase Master Hostname
   # @option [String] :hbase_port HBase Master Host Port
   # @option [String] :hbase_home Hadoop Home Directory
@@ -56,7 +56,7 @@ module Worker
     else
       table_descriptor = @hbase.table_descriptor(table_name)
       Hbacker.log.warn "Worker#queue_table_export: Table: #{table_name} is empty. Recording in Db but not backing up"
-      @db.table_backup_info(table_name, start_time, end_time, table_descriptor,  versions, session_name, true, false)
+      @db.table_info(:export, table_name, start_time, end_time, table_descriptor,  versions, session_name, true, false)
     end
 
   end

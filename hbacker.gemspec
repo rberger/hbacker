@@ -9,8 +9,8 @@ Gem::Specification.new do |s|
   s.authors     = ["Robert J. Berger Runa, Inc"]
   s.email       = ["rberger@runa.com"]
   s.homepage    = "http://blog.ibd.com"
-  s.summary     = %q{Backup and Restore of HBase Cluster or individual tables}
-  s.description = %q{Backup and Restore of HBase Cluster or individual tables using hadoop/hbase Mapreduce HBASE-1684}
+  s.summary     = %q{Export and Import of HBase Cluster or individual tables}
+  s.description = %q{Export and Import of HBase Cluster or individual tables using hadoop/hbase Mapreduce HBASE-1684}
 
   s.rubyforge_project = "hbacker"
 

@@ -8,20 +8,20 @@ require 'hbacker/db'
 
 module Hbacker
   class CLI < Thor
-    attr_reader :backup_start
+    attr_reader :export_start
     ##
     # Use (Now - 60 seconds) * 1000 to have a timestamp from 60 seconds ago in milliseconds
     #
-    @@backup_start = Time.now.utc
-    now_minus_60_sec = (@@backup_start.to_i - 60) * 1000
-    @@backup_timestamp = @@backup_start.strftime("%Y%m%d_%H%M%S")
+    @@export_start = Time.now.utc
+    now_minus_60_sec = (@@export_start.to_i - 60) * 1000
+    @@export_timestamp = @@export_start.strftime("%Y%m%d_%H%M%S")
     
-    def self.backup_start
-      @@backup_start
+    def self.export_start
+      @@export_start
     end
     
-    def self.backup_timestamp
-      @@backup_timestamp
+    def self.export_timestamp
+      @@export_timestamp
     end
     
     # Common options
@@ -72,9 +72,9 @@ module Hbacker
       :aliases => "-s", 
       :desc => "End time (millisecs since Unix Epoch)"
     method_option :session_name, 
-      :default => @@backup_timestamp,
+      :default => @@export_timestamp,
       :type => :string,
-      :desc => "String to select the backup session. Exp: 20110327_224341",
+      :desc => "String to select the export session. Exp: 20110327_224341",
       :banner => "STRING"
     method_option :hbase_port, 
       :type => :numeric,
@@ -162,9 +162,9 @@ module Hbacker
       :aliases => "-s", 
       :desc => "End time (millisecs since Unix Epoch)"
     method_option :session_name, 
-      :default => @@backup_timestamp,
+      :default => @@export_timestamp,
       :type => :string,
-      :desc => "String to select the backup session. Exp: 20110327_224341",
+      :desc => "String to select the export session. Exp: 20110327_224341",
       :banner => "STRING"
     method_option :hbase_port, 
       :type => :numeric,
@@ -216,14 +216,14 @@ module Hbacker
       end
     end
 
-    desc "db", "Query Backup Meta Info DB"
-    long_desc "Support functions to allow querying of the DB used to maintain information about backups" +
+    desc "db", "Query Export Meta Info DB"
+    long_desc "Support functions to allow querying of the DB used to maintain information about exports" +
     "Options session_name and table_name allow the use of % for a wildcard at beginning and/or end"
     method_option :hbase_host, 
       :type => :string, 
       :default => "hbase-master0-staging.runa.com", 
       :aliases => "-H",
-      :desc => "Name of Hbase master server to find backups for",
+      :desc => "Name of Hbase master server to find exports for",
       :required => true
     method_option :table_name,
       :type => :string,
@@ -232,11 +232,11 @@ module Hbacker
       :banner => "STRING"
     method_option :session_name, 
       :type => :string,
-      :desc => "String to select the backup session. Exp: 20110327_%",
+      :desc => "String to select the export session. Exp: 20110327_%",
       :banner => "STRING"
     method_option :dest_root,
       :type => :string,
-      :desc => "Limit backups to ones that saved in this locaiton",
+      :desc => "Limit exports to ones that saved in this locaiton",
       :default => "s3n://runa-hbase-staging/",
       :required => true
     def db
@@ -251,18 +251,18 @@ module Hbacker
       table_name = options[:table_name]
       dest_root = options[:dest_root]
       
-      backups = db.backup_info(session_name)
+      exports = db.export_info(session_name)
       
-      backups.each do |backup|
-        session_name = backup['session_name'].first
+      exports.each do |export|
+        session_name = export['session_name'].first
         attributes_string = ""
-        backup.each_pair do |k,v|
+        export.each_pair do |k,v|
           next if %w(session_name id).include?(k)
-          attributes_string += "#{k}: #{backup[k]} "
+          attributes_string += "#{k}: #{export[k]} "
         end
         puts "#{session_name}: #{attributes_string}"
         if table_name
-          tables = db.backup_table_info(session_name, dest_root, table_name)
+          tables = db.export_table_info(session_name, dest_root, table_name)
           tables.each do |table|
             attributes_string = ""
             table.each_pair do |k,v|

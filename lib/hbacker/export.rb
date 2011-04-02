@@ -41,7 +41,7 @@ module Hbacker
         Hbacker.log.debug "Export#specified_tables"
         opts = Hash.transform_keys_to_symbols(opts)
 
-        @db.backup_start_info(opts[:session_name], opts[:dest_root], opts[:start], opts[:end], Time.now.utc)
+        @db.export_start_info(opts[:session_name], opts[:dest_root], opts[:start], opts[:end], Time.now.utc)
         opts[:tables].each do |table_name|
         
           dest = "#{opts[:dest_root]}#{opts[:session_name]}/#{table_name}/"
@@ -94,13 +94,13 @@ module Hbacker
     # * Uses Hadoop to export specfied table from HBase to destination file system
     # * Record that the date range and schema of table was exported to
     # @param [String] table_name
-    # @param [Integer] start_time Earliest Time to backup from (milliseconds since Unix Epoch)
-    # @param [Integer] end_time Latest Time to backup to (milliseconds since Unix Epoch)
+    # @param [Integer] start_time Earliest Time to export from (milliseconds since Unix Epoch)
+    # @param [Integer] end_time Latest Time to export to (milliseconds since Unix Epoch)
     # @param [String] destination Full scheme://path for destination. Suitable for use with HBase/HDFS
-    # @param [Integer] versions Number of versions to backup
-    # @param [String] session_name Name of the Backup Session
+    # @param [Integer] versions Number of versions to export
+    # @param [String] session_name Name of the Export Session
     # @todo Check if table is empty, if so don't do hadoop job, just create the target directory and record in Db
-    # @todo Make sure table is compacted before backup
+    # @todo Make sure table is compacted before export
     #
     def table(table_name, start_time, end_time, destination, versions, session_name)
       table_descriptor = @hbase.table_descriptor(table_name)
@@ -114,13 +114,13 @@ module Hbacker
       if $?.exitstatus > 0
         Hbacker.log.error"Hadoop command failed:"
         Hbacker.log.error cmd_output
-        @db.table_backup_info(table_name, start_time, end_time, table_descriptor, versions, session_name, false, true)
+        @db.table_info(:export, table_name, start_time, end_time, table_descriptor, versions, session_name, false, true)
         Hbacker.log.debug "About to save_info to s3: #{destination}hbacker_hadoop_error.log"
         @s3.save_info("#{destination}hbacker_hadoop_error.log", cmd_output)
         raise StandardError, "Error running Haddop Command", caller
       end
       
-      @db.table_backup_info(table_name, start_time, end_time, table_descriptor, versions, session_name, false, false)
+      @db.table_info(:export, table_name, start_time, end_time, table_descriptor, versions, session_name, false, false)
       Hbacker.log.debug "About to save_info to s3: #{destination}hbacker_hadoop.log"
       @s3.save_info("#{destination}hbacker_hadoop.log", cmd_output)
     end

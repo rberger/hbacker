@@ -20,12 +20,12 @@ module Hbacker
     # * Create the table on the target HBase using the schema from Db
     # * Call the Hadoop process to move the file
     # @param [Hash] opts Hash from the CLI with all the options set
-    # @option opts [String] :source_root Scheme://root_path of the Source directory of backups
-    # @option opts [String] :session_name Name of the backup session / subdirectory containing table directories
+    # @option opts [String] :source_root Scheme://root_path of the Source directory of exports
+    # @option opts [String] :session_name Name of the export session / subdirectory containing table directories
     # 
     def specified_tables(opts)
-      backup_table_names = @db.backup_table_names(opts[:session_name], opts[:source_root])
-      backup_table_names.each do |table|
+      export_table_names = @db.export_table_names(opts[:session_name], opts[:source_root])
+      export_table_names.each do |table|
         source = "#{opts[:source_root]}#{opts[:session_name]}/#{table}/"
         Hbacker.log.info "Backing up #{table} to #{source}"
         Hbacker.log.debug "self.table(#{table}, #{source})"
@@ -36,7 +36,7 @@ module Hbacker
     ##
     # Uses Hadoop to import specfied table from source file system to target HBase Cluster
     # @param [String] table_name The name of the table to import
-    # @param [String] source scheme://source_path/session_name/ to the backup data
+    # @param [String] source scheme://source_path/session_name/ to the export data
     #
     def table(table_name, source)
       
@@ -47,7 +47,7 @@ module Hbacker
       Hbacker.log.debug "About to execute #{cmd}"
       cmd_output = `#{cmd} 2>&1`
       # Hbacker.log.debug "cmd output: #{cmd_output}"
-      import_session_name = Hbacker::Cli.backup_timestamp
+      import_session_name = Hbacker::Cli.export_timestamp
       
       if $?.exitstatus > 0
         Hbacker.log.error"Hadoop command failed: #{cmd}"
