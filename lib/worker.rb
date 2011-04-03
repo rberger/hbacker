@@ -26,7 +26,6 @@ module Worker
       stmt = "WORKER ERROR: job: #{job} e: #{e.inspect} args: #{args.inspect}"
       Hbacker.log.error stmt
       Stalker.log stmt
-      puts stmt
     end
 
 

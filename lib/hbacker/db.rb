@@ -11,7 +11,7 @@ module Hbacker
     # @param [String] hbase_name Name to refer to the HBase cluster by
     #   Usually the FQDN with dots turned to underscores
     #
-    def initialize(aws_access_key_id, aws_secret_access_key, hbase_name)
+    def initialize(aws_access_key_id, aws_secret_access_key, hbase_name, reiteration_time=5)
       @aws_access_key_id = aws_access_key_id
       @aws_secret_access_key =aws_secret_access_key
       @hbase_name = hbase_name
@@ -20,6 +20,9 @@ module Hbacker
       
       # connect to SDB
       RightAws::ActiveSdb.establish_connection(aws_access_key_id, aws_secret_access_key, :logger => Hbacker.log)
+
+      orig_reiteration_time = RightAws::AWSErrorHandler::reiteration_time
+      RightAws::AWSErrorHandler::reiteration_time = reiteration_time
 
       # Creating a domain is idempotent. Its easier to try to create than to check if it already exists
       ExportSession.create_domain
@@ -80,7 +83,7 @@ module Hbacker
         :specified_end => specified_end,
         :started_at => started_at, 
         :dest_root => dest_root, 
-        :cluster_namee => @hbase_name,
+        :cluster_name => @hbase_name,
         :updated_at => Time.now.utc
       }
       
@@ -132,7 +135,7 @@ module Hbacker
     #   % can be used as a wildcard at begining and/or end
     # @return [Array<Hash>] List of table info that were backed up for specified session
     #
-    def table_info(mode, session_name, dest_root, table_name=nil)
+    def list_table_info(mode, session_name, dest_root, table_name=nil)
       if table_name && table_name.include?("%")
         conditions = ['table_name like ? AND session_name = ? AND dest_root = ?', table_name, session_name, dest_root]
       else

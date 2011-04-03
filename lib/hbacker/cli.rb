@@ -105,8 +105,8 @@ module Hbacker
     method_option :workers_timeout,
       :type => :numeric,
       :default => 60000,
-      :desc => "Timeout for waiting for # of workers in Beanstalk Queue to get less than worker_watermark"
-    method_option :worker_watermark,
+      :desc => "Timeout for waiting for # of workers in Beanstalk Queue to get less than workers_watermark"
+    method_option :workers_watermark,
       :type => :numeric,
       :default => 20,
       :desc => "Will not add more than this number of workers in queue at a time"
@@ -195,8 +195,8 @@ module Hbacker
     method_option :workers_timeout,
       :type => :numeric,
       :default => 60000,
-      :desc => "Timeout for waiting for # of workers in Beanstalk Queue to get less than worker_watermark"
-    method_option :worker_watermark,
+      :desc => "Timeout for waiting for # of workers in Beanstalk Queue to get less than workers_watermark"
+    method_option :workers_watermark,
       :type => :numeric,
       :default => 20,
       :desc => "Will not add more than this number of workers in queue at a time"
@@ -262,7 +262,7 @@ module Hbacker
         end
         puts "#{session_name}: #{attributes_string}"
         if table_name
-          tables = db.table_info(:export, session_name, dest_root, table_name)
+          tables = db.list_table_info(:export, session_name, dest_root, table_name)
           tables.each do |table|
             attributes_string = ""
             table.each_pair do |k,v|

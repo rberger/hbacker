@@ -41,12 +41,14 @@ module Hbacker
       stats[:duration] = Time.now.utc - start
       stats[:ok] = false
       stats[:timeout] = true
+      Hbacker.log.warn "Hbacker.wait_for_hbacker_queue queue_name: #{queue_name.inspect}: Timeout"
       return stats
     rescue Beanstalk::NotFoundError
-      Hbacker.log.warn "Hbacker.wait_for_hbacker_queue: No jobs Found"
+      Hbacker.log.debug "Hbacker.wait_for_hbacker_queue queue_name: #{queue_name.inspect}: No jobs Found"
     end
     stats[:duration] = (Time.now.utc - start)
     stats[:ok] = true
+    Hbacker.log.debug "Hbacker.wait_for_hbacker_queue queue_name: #{queue_name.inspect}: OK"
     return stats
   end
   
