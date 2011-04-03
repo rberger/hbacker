@@ -4,6 +4,8 @@ require "hbacker"
 
 describe Hbacker, "queue_table_export Stalker job" do
   before :all do
+    Hbacker.log.level = Logger::ERROR
+    
     # Just enough code to execute the worker job in the scope of the test
     module Stalker
       extend self
@@ -35,7 +37,8 @@ describe Hbacker, "queue_table_export Stalker job" do
         :hbase_home => "/mnt/hbase",
         :hadoop_home =>"/mnt/hadoop",
         :hbase_version => '0.20.3',
-        :mapred_max_jobs => 10
+        :mapred_max_jobs => 10,
+        :log_level => Hbacker.log.level
       }
     end
     

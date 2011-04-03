@@ -15,7 +15,7 @@ module Hbacker
       @aws_secret_access_key =aws_secret_access_key
       @hbase_name = hbase_name
       
-      create_table_classes
+      create_table_classes(@hbase_name)
       
       # connect to SDB
       RightAws::ActiveSdb.establish_connection(aws_access_key_id, aws_secret_access_key, :logger => Hbacker.log)
@@ -26,7 +26,7 @@ module Hbacker
       ExportedColumnDescriptor.create_domain
       ImportSession.create_domain
       ImportedHbaseTable.create_domain
-      ImportedHColumnDescriptors.create_domain
+      ImportedColumnDescriptor.create_domain
     end
     
     # Records HBase Table Info into SimpleDB table
@@ -70,14 +70,14 @@ module Hbacker
     # @param [Integer] specified_start The start_time of the earliest record to be backed up.
     #   Value of 0 means its a full export
     # @param [Integer] specified_end End time of the last record to be backed up
-    # @param [Time] session_started_at When the export started
+    # @param [Time] started_at When the export started
     #
-    def start_info(mode, session_name, dest_root, specified_start, specified_end, session_started_at)
+    def start_info(mode, session_name, dest_root, specified_start, specified_end, started_at)
       session_info = {
         :session_name => session_name, 
         :specified_start => specified_start,
         :specified_end => specified_end,
-        :session_started_at => session_started_at, 
+        :started_at => started_at, 
         :dest_root => dest_root, 
         :cluster_namee => @hbase_name,
         :updated_at => Time.now.utc
@@ -183,8 +183,8 @@ module Hbacker
       end
     end
     
-    private
-    def create_table_classes
+    # private
+    def create_table_classes(hbase_name)
       # Dynmaically create Class so we can dynamically set the name of the "Domain" in SimpleDB
       
         # Top level record of a export session
@@ -192,7 +192,7 @@ module Hbacker
         # (cluster_name specifies the HBase Cluster backed up)
         # One record per export session
         Object::const_set('ExportSession',  Class.new(RightAws::ActiveSdb::Base) do
-          set_domain_name "session_info"
+          set_domain_name "export_info"
           columns do
             cluster_name
             session_name
@@ -200,29 +200,7 @@ module Hbacker
             specified_start :Integer
             specified_end :Integer
             started_at :DateTime
-            ended_at :DateTime
-            error :Boolean
-            error_info
-            updated_at :DateTime
-            created_at :DateTime, :default => lambda{ Time.now.utc }
-          end
-        end
-        )
-
-        # Top level record of an import session
-        # One SimpleDB table for all Imports 
-        # (cluster_name specifies the HBase Cluster imported)
-        # One record per import session
-        Object::const_set('ImportSession',  Class.new(RightAws::ActiveSdb::Base) do
-          set_domain_name "import_info"
-          columns do
-            cluster_name
-            session_name
-            source_root
-            specified_start :Integer
-            specified_end :Integer
-            started_at :DateTime
-            ended_at :DateTime
+            ended_at :DateTime, :default  => lambda { Time.at(0) } # Can't have a nil date in ActiveSdb
             error :Boolean
             error_info
             updated_at :DateTime
@@ -276,6 +254,28 @@ module Hbacker
       end
       )
       
+      # Top level record of an import session
+      # One SimpleDB table for all Imports 
+      # (cluster_name specifies the HBase Cluster imported)
+      # One record per import session
+      Object::const_set('ImportSession',  Class.new(RightAws::ActiveSdb::Base) do
+        set_domain_name "import_info"
+        columns do
+          cluster_name
+          session_name
+          source_root
+          specified_start :Integer
+          specified_end :Integer
+          started_at :DateTime
+          ended_at :DateTime, :default  => lambda { Time.at(0) } # Can't have a nil date in ActiveSdb
+          error :Boolean
+          error_info
+          updated_at :DateTime
+          created_at :DateTime, :default => lambda{ Time.now.utc }
+        end
+      end
+      )
+
       # Records the status of each HBase Table imported
       # There is a SimpleDb Domain for each HBase Cluster imported
       # Each row represents the state of an Hbase Table import

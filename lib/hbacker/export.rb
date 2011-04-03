@@ -37,7 +37,7 @@ module Hbacker
     # @param [Hash] opts Hash from the CLI with all the options set
     #
     def specified_tables(opts)
-      begin
+      # begin
         Hbacker.log.debug "Export#specified_tables"
         opts = Hash.transform_keys_to_symbols(opts)
 
@@ -46,7 +46,7 @@ module Hbacker
         
           dest = "#{opts[:dest_root]}#{opts[:session_name]}/#{table_name}/"
         
-          wait_results = wait_for_hbacker_queue('queue_table_export_job', opts[:workers_watermark], opts[:workers_timeout])
+          wait_results = Hbacker.wait_for_hbacker_queue('queue_table_export_job', opts[:workers_watermark], opts[:workers_timeout])
           unless wait_results[:ok]
             msg = "Hbacker::Export#specified_tables: Timeout (#{opts[:workers_timeout]}) " +
               " waiting for workers in queue < opts[:workers_timeout]"
@@ -59,9 +59,10 @@ module Hbacker
           self.queue_table_export_job(table_name, opts[:start], opts[:end], dest, opts[:versions], 
             opts[:session_name], opts[:timeout])
         end
-      rescue Exception => exception
-        Hbacker.log.error "Hbacker::Export#specified_tables: EXCEPTION: #{e}"
-      end
+      # rescue Exception => exception
+      #   Hbacker.log.error "Hbacker::Export#specified_tables: EXCEPTION: #{exception}"
+      #   Hbacker.log.error caller.join("\n")
+      # end
     end
     
     ##

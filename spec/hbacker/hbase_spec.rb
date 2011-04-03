@@ -11,8 +11,7 @@ describe Hbacker::Hbase, "initialize" do
     @hbase_hm = "/mnt/hbase"
     @hadoop_hm = "/mnt/hadoop"
     @stargate = mock('@stargate')
-    Stargate::Client.new.stub(:new).and_return(@stargate)
-  
+    Stargate::Client.stub(:new).and_return(@stargate)
   end
   
   it "should create an instance of Stargate::Client from the correct url with no port specified" do

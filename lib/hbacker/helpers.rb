@@ -25,7 +25,7 @@ module Hbacker
   # @option retunr_value [Integer] :pause-time-left
   # @option retunr_value [Integer] :total-jobs
   #
-  def wait_for_hbacker_queue(queue_name, threshold, timeout)
+  def self.wait_for_hbacker_queue(queue_name, threshold, timeout)
     start = Time.now.utc
     stats = {}
     begin
