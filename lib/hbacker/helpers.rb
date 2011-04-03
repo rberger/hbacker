@@ -32,7 +32,7 @@ module Hbacker
       Timeout::timeout(timeout) do |timeout_length|
         bs = Stalker.beanstalk
         loop do
-          stats = bs.stats_tube queue_name.transform_keys_to_symbols
+          stats = Hbacker.transform_keys_to_symbols(bs.stats_tube(queue_name))
           stats[:active_jobs] = stats[:current_jobs_ready] + stats[:current_jobs_reserved]
           break if stats[:active_jobs] < threshold
         end
@@ -42,9 +42,22 @@ module Hbacker
       stats[:ok] = false
       stats[:timeout] = true
       return stats
+    rescue Beanstalk::NotFoundError
+      Hbacker.log.warn "Hbacker.wait_for_hbacker_queue: No jobs Found"
     end
     stats[:duration] = (Time.now.utc - start)
     stats[:ok] = true
     return stats
   end
+  
+  #take keys of hash and transform those to a symbols
+  def self.transform_keys_to_symbols(input)
+    return input if not input.is_a?(Hash)
+    hsh = input.inject({}) do |memo,(k,v)|
+      k = k.class == Symbol ? k : k.downcase.gsub(/\s+|-/, "_").to_sym
+      memo[k] = self.transform_keys_to_symbols(v); memo
+    end
+    return hsh
+  end
+  
 end

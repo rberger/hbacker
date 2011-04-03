@@ -39,7 +39,7 @@ module Hbacker
     def specified_tables(opts)
       # begin
         Hbacker.log.debug "Export#specified_tables"
-        opts = Hash.transform_keys_to_symbols(opts)
+        opts = Hbacker.transform_keys_to_symbols(opts)
 
         @db.start_info(:export, opts[:session_name], opts[:dest_root], opts[:start], opts[:end], Time.now.utc)
         opts[:tables].each do |table_name|

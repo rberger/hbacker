@@ -30,7 +30,7 @@ module Worker
     end
 
 
-    args = Hash.transform_keys_to_symbols(args)
+    args = Hbacker.transform_keys_to_symbols(args)
     Hbacker.log.level = args[:log_level] ? args[:log_level] : Logger::DEBUG
     
     # Turn args hash into instance variables. These are read only

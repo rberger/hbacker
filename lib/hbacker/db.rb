@@ -4,6 +4,7 @@ module Hbacker
   require "hbacker"
 
   class Db
+    attr_reader :aws_access_key_id, :aws_secret_access_key, :hbase_name
     # Initializes SimpleDB Table and connection
     # @param [String] aws_access_key_id Amazon Access Key ID
     # @param [String] aws_secret_access_key Amazon Secret Access Key
