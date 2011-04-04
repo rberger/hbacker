@@ -88,7 +88,7 @@ module Hbacker
         :log_level  => Hbacker.log.level
       }
       Hbacker.log.debug "------- Stalker.enqueue('queue_table_export', args, {:ttr => #{timeout}})"
-      Stalker.enqueue('queue_table_export', args, {:ttr => timeout})
+      Stalker.enqueue('queue_table_export', args, {:ttr => timeout}, true, :no_bury_for_error_handler => true)
     end
     
     ##

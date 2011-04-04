@@ -38,7 +38,8 @@ describe Hbacker, "queue_table_export Stalker job" do
         :hadoop_home =>"/mnt/hadoop",
         :hbase_version => '0.20.3',
         :mapred_max_jobs => 10,
-        :log_level => Hbacker.log.level
+        :log_level => Hbacker.log.level,
+        :reiteration_time => 5
       }
     end
     

@@ -20,10 +20,16 @@ module Worker
   # @option [String] :hbase_home Hadoop Home Directory
   # @option [String] :hadoop_home Hadoop Home Directory
   #
-  Stalker.job 'queue_table_export' do |args|
+  Stalker.job 'queue_table_export' do |args, job, style_opts|
     Stalker.log "Inside queue_table_export job"
-    Stalker.error do |e, job, args|
-      stmt = "WORKER ERROR: job: #{job} e: #{e.inspect} args: #{args.inspect}"
+    Stalker.error do |e, name, args, job, style_opts|
+      if e.include?(/ServiceUnavailable/)
+        Hbacker.log.warn "ServiceUnavailable. Putting job back on queue"
+        job.put_back(self.pri, 5, ttr=self.ttr)
+        job.delete
+        return
+      end
+      stmt = "WORKER ERROR: job: #{name} e: #{e.inspect} args: #{args.inspect}"
       Hbacker.log.error stmt
       Stalker.log stmt
     end
@@ -39,7 +45,7 @@ module Worker
     end
 
     
-    db = Hbacker::Db.new(aws_access_key_id, aws_secret_access_key, hbase_name)
+    db = Hbacker::Db.new(aws_access_key_id, aws_secret_access_key, hbase_name, reiteration_time)
     hbase = Hbacker::Hbase.new(hbase_home, hadoop_home, hbase_host, hbase_port)
     s3 = Hbacker::S3.new(aws_access_key_id, aws_secret_access_key)
     export = Hbacker::Export.new(hbase, db, hbase_home, hbase_version, hadoop_home, s3)

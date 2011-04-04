@@ -108,8 +108,12 @@ module Hbacker
       :desc => "Timeout for waiting for # of workers in Beanstalk Queue to get less than workers_watermark"
     method_option :workers_watermark,
       :type => :numeric,
-      :default => 20,
+      :default => 5,
       :desc => "Will not add more than this number of workers in queue at a time"
+    method_option :reiteration_time,
+      :type => :numeric,
+      :default => 10,
+      :desc => "How many times the RightAws should try to complete an operation. Each time it backs off its delay by 2x"
     def export
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
       
@@ -198,8 +202,12 @@ module Hbacker
       :desc => "Timeout for waiting for # of workers in Beanstalk Queue to get less than workers_watermark"
     method_option :workers_watermark,
       :type => :numeric,
-      :default => 20,
+      :default => 5,
       :desc => "Will not add more than this number of workers in queue at a time"
+    method_option :reiteration_time,
+      :type => :numeric,
+      :default => 10,
+      :desc => "How many times the RightAws should try to complete an operation. Each time it backs off its delay by 2x"
     def import
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
       config = setup(:import, options)
@@ -284,7 +292,7 @@ module Hbacker
       def setup(task, options)
         config = YAML.load_file(File.expand_path(options[:aws_config]))
         hbase_name = options[:hbase_host].gsub(/[-\.]/, "_")
-        db = Hbacker::Db.new(config['access_key_id'], config['secret_access_key'], hbase_name)
+        db = Hbacker::Db.new(config['access_key_id'], config['secret_access_key'], hbase_name, opt[:reiteration_time])
         hbase = Hbacker::Hbase.new(options[:hbase_home], options[:hadoop_home], options[:hbase_host], options[:hbase_port]) unless task == :db
         
         case task
