@@ -108,8 +108,8 @@ module Hbacker
       :desc => "Timeout for waiting for # of workers in Beanstalk Queue to get less than workers_watermark"
     method_option :workers_watermark,
       :type => :numeric,
-      :default => 5,
-      :desc => "Will not add more than this number of workers in queue at a time"
+      :default => 1,
+      :desc => "Number of jobs that need to be ready before more jobs are added to the queue"
     method_option :reiteration_time,
       :type => :numeric,
       :default => 10,
@@ -202,8 +202,8 @@ module Hbacker
       :desc => "Timeout for waiting for # of workers in Beanstalk Queue to get less than workers_watermark"
     method_option :workers_watermark,
       :type => :numeric,
-      :default => 5,
-      :desc => "Will not add more than this number of workers in queue at a time"
+      :default => 1,
+      :desc => "Number of jobs that need to be ready before more jobs are added to the queue"
     method_option :reiteration_time,
       :type => :numeric,
       :default => 10,
@@ -292,7 +292,7 @@ module Hbacker
       def setup(task, options)
         config = YAML.load_file(File.expand_path(options[:aws_config]))
         hbase_name = options[:hbase_host].gsub(/[-\.]/, "_")
-        db = Hbacker::Db.new(config['access_key_id'], config['secret_access_key'], hbase_name, opt[:reiteration_time])
+        db = Hbacker::Db.new(config['access_key_id'], config['secret_access_key'], hbase_name, options[:reiteration_time])
         hbase = Hbacker::Hbase.new(options[:hbase_home], options[:hadoop_home], options[:hbase_host], options[:hbase_port]) unless task == :db
         
         case task

@@ -1,6 +1,8 @@
 #!/usr/bin/env ruby
 
 require "stalker"
+require File.expand_path(File.join(File.dirname(__FILE__), "../", "lib", "stalker"))  
+
 require "worker"
 
 Stalker.work

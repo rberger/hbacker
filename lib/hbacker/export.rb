@@ -1,6 +1,7 @@
 module Hbacker
   require "hbacker"
   require "stalker"
+  require File.expand_path(File.join(File.dirname(__FILE__), "../", "stalker"))  
   
   class Export
     # attr_reader :hadoop_home, :hbase_home
@@ -57,7 +58,7 @@ module Hbacker
           Hbacker.log.debug "Calling queue_table_export_job(#{table_name}, #{opts[:start]}, "+
             "#{opts[:end]}, #{dest}, #{opts[:versions]}, #{opts[:session_name]})"
           self.queue_table_export_job(table_name, opts[:start], opts[:end], dest, opts[:versions], 
-            opts[:session_name], opts[:timeout])
+            opts[:session_name], opts[:timeout], opts[:reiteration_time], opts[:mapred_max_jobs])
         end
       # rescue Exception => exception
       #   Hbacker.log.error "Hbacker::Export#specified_tables: EXCEPTION: #{exception}"
@@ -67,7 +68,8 @@ module Hbacker
     
     ##
     # Queue a ruby job to manage the Hbase/Hadoop job
-    def queue_table_export_job(table_name, start_time, end_time, destination, versions, session_name, timeout)
+    def queue_table_export_job(table_name, start_time, end_time, destination, 
+      versions, session_name, timeout, reiteration_time, mapred_max_jobs)
       args = {
         :table_name => table_name,
         :start_time => start_time,
@@ -85,7 +87,9 @@ module Hbacker
         :hbase_version => @hbase_version,
         :hadoop_home => @hadoop_home,
         :s3 => @s3,
-        :log_level  => Hbacker.log.level
+        :mapred_max_jobs => mapred_max_jobs,
+        :log_level  => Hbacker.log.level,
+        :reiteration_time => reiteration_time
       }
       Hbacker.log.debug "------- Stalker.enqueue('queue_table_export', args, {:ttr => #{timeout}})"
       Stalker.enqueue('queue_table_export', args, {:ttr => timeout}, true, :no_bury_for_error_handler => true)

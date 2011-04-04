@@ -1,3 +1,8 @@
+module Stalker
+  def log(msg); end
+  # def log_error(msg); end
+end
+
 module Worker
   require "hbacker"
   require 'logger'
@@ -21,22 +26,24 @@ module Worker
   # @option [String] :hadoop_home Hadoop Home Directory
   #
   Stalker.job 'queue_table_export' do |args, job, style_opts|
-    Stalker.log "Inside queue_table_export job"
+    args = Hbacker.transform_keys_to_symbols(args)
+    Hbacker.log.level = args[:log_level] ? args[:log_level] : Logger::DEBUG
+
     Stalker.error do |e, name, args, job, style_opts|
-      if e.include?(/ServiceUnavailable/)
-        Hbacker.log.warn "ServiceUnavailable. Putting job back on queue"
-        job.put_back(self.pri, 5, ttr=self.ttr)
-        job.delete
-        return
-      end
       stmt = "WORKER ERROR: job: #{name} e: #{e.inspect} args: #{args.inspect}"
       Hbacker.log.error stmt
-      Stalker.log stmt
+      
+      if e.include?(/ServiceUnavailable/)
+        Hbacker.log.warn "ServiceUnavailable. Putting job back on queue"
+        job.put_back(job.pri, 10, job.ttr)
+        job.delete
+        break
+      end
+      stmt = "----------- After test for ServiceUnavailable"
+      Hbacker.log.error stmt
     end
 
 
-    args = Hbacker.transform_keys_to_symbols(args)
-    Hbacker.log.level = args[:log_level] ? args[:log_level] : Logger::DEBUG
     
     # Turn args hash into instance variables. These are read only
     args.each_pair do |k,v|
@@ -45,23 +52,23 @@ module Worker
     end
 
     
-    db = Hbacker::Db.new(aws_access_key_id, aws_secret_access_key, hbase_name, reiteration_time)
-    hbase = Hbacker::Hbase.new(hbase_home, hadoop_home, hbase_host, hbase_port)
-    s3 = Hbacker::S3.new(aws_access_key_id, aws_secret_access_key)
-    export = Hbacker::Export.new(hbase, db, hbase_home, hbase_version, hadoop_home, s3)
+    @db_wrk ||= Hbacker::Db.new(aws_access_key_id, aws_secret_access_key, hbase_name, reiteration_time)
+    @hbase_wrk ||= Hbacker::Hbase.new(hbase_home, hadoop_home, hbase_host, hbase_port)
+    @s3_wrk ||= Hbacker::S3.new(aws_access_key_id, aws_secret_access_key)
+    @export_wrk ||= Hbacker::Export.new(@hbase_wrk, @db_wrk, hbase_home, hbase_version, hadoop_home, @s3_wrk)
     
-    has_rows = hbase.table_has_rows?(table_name)
+    has_rows = @hbase_wrk.table_has_rows?(table_name)
       
     if has_rows
-      if hbase.wait_for_mapred_queue(mapred_max_jobs, 10000, 2) != :ok
-        raise Exception, "Timedout waiting #{10000 *2} seconds for Hadoop Map Reduce Queue to be less than #{opts[:mapred_max_jobs]} jobs"
+      if @hbase_wrk.wait_for_mapred_queue(mapred_max_jobs, 10000, 2) != :ok
+        raise Exception, "Timedout waiting #{10000 *2} seconds for Hadoop Map Reduce Queue to be less than #{mapred_max_jobs} jobs"
       end
       Hbacker.log.info "Backing up #{table_name} to #{destination}"
-      export.table(table_name, start_time, end_time, destination, versions, session_name)
+      @export_wrk.table(table_name, start_time, end_time, destination, versions, session_name)
     else
-      table_descriptor = hbase.table_descriptor(table_name)
+      table_descriptor = @hbase_wrk.table_descriptor(table_name)
       Hbacker.log.warn "Worker#queue_table_export: Table: #{table_name} is empty. Recording in Db but not backing up"
-      db.table_info(:export, table_name, start_time, end_time, table_descriptor,  versions, session_name, true, false)
+      @db_wrk.table_info(:export, table_name, start_time, end_time, table_descriptor,  versions, session_name, true, false)
     end
 
   end

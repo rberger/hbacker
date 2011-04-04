@@ -15,7 +15,9 @@ module Hbacker
       @aws_access_key_id = aws_access_key_id
       @aws_secret_access_key =aws_secret_access_key
       @hbase_name = hbase_name
-      
+      @db_count ||= 0
+      Hbacker.log.debug "Db.new @db_count: #{@db_count}"
+      @db_count += 1
       create_table_classes(@hbase_name)
       
       # connect to SDB
@@ -44,7 +46,9 @@ module Hbacker
     def table_info(mode, table_name, start_time, end_time, table_descriptor, versions, session_name, empty, error=false)
       now = Time.now.utc
       table_info = {
-        :table_name => table_name, 
+        :table_name => table_name,
+        :start_time => start_time,
+        :end_time => end_time,
         :session_name => session_name,
         :empty => empty,
         :error => error,
