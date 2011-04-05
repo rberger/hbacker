@@ -4,7 +4,7 @@ PATH
     hbacker (0.0.2)
       hbase-stargate
       right_aws (>= 2.0.0)
-      stalker
+      stalker (= 0.8.0)
       thor
       uuidtools
 
@@ -35,9 +35,9 @@ GEM
     json (1.5.1)
     json_pure (1.5.1)
     rake (0.8.7)
-    right_aws (2.1.0)
-      right_http_connection (>= 1.2.5)
-    right_http_connection (1.3.0)
+    right_aws (2.0.0)
+      right_http_connection (>= 1.2.1)
+    right_http_connection (1.2.4)
     rspec (2.5.0)
       rspec-core (~> 2.5.0)
       rspec-expectations (~> 2.5.0)
