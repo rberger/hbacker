@@ -34,9 +34,8 @@ module Worker
       Hbacker.log.error stmt
       
       if e.include?(/ServiceUnavailable/)
-        Hbacker.log.warn "ServiceUnavailable. Putting job back on queue"
-        job.put_back(job.pri, 10, job.ttr)
-        job.delete
+        Hbacker.log.warn "ServiceUnavailable. Releasing job back on queue"
+        job.release(job.pri, 10, job.ttr)
         break
       end
       stmt = "----------- After test for ServiceUnavailable"

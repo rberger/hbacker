@@ -112,7 +112,7 @@ module Hbacker
       :desc => "Number of jobs that need to be ready before more jobs are added to the queue"
     method_option :reiteration_time,
       :type => :numeric,
-      :default => 10,
+      :default => 15,
       :desc => "How many times the RightAws should try to complete an operation. Each time it backs off its delay by 2x"
     def export
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
@@ -206,7 +206,7 @@ module Hbacker
       :desc => "Number of jobs that need to be ready before more jobs are added to the queue"
     method_option :reiteration_time,
       :type => :numeric,
-      :default => 10,
+      :default => 15,
       :desc => "How many times the RightAws should try to complete an operation. Each time it backs off its delay by 2x"
     def import
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
