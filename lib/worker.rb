@@ -42,7 +42,8 @@ module Worker
       Hbacker.log.error stmt
     end
 
-
+    # Hack to get around issues testing this module
+    @db_wrk = @hbase_wrk = @s3_wrk = @export_wrk = nil if args[:reset_instance_vars]if args[:reset_instance_vars]if args[:reset_instance_vars]
     
     # Turn args hash into instance variables. These are read only
     args.each_pair do |k,v|
@@ -50,14 +51,12 @@ module Worker
       self.class.send(:define_method, k, proc{self.instance_variable_get("@#{k}")})
     end
 
-    puts "Worker First @hbase_mock: #{@hbase_mock.inspect} @hbase_wrk: #{@hbase_wrk.inspect}"
-    
     @db_wrk ||= Hbacker::Db.new(aws_access_key_id, aws_secret_access_key, hbase_name, reiteration_time)
     
     @hbase_wrk ||= Hbacker::Hbase.new(hbase_home, hadoop_home, hbase_host, hbase_port)
     @s3_wrk ||= Hbacker::S3.new(aws_access_key_id, aws_secret_access_key)
     @export_wrk ||= Hbacker::Export.new(@hbase_wrk, @db_wrk, hbase_home, hbase_version, hadoop_home, @s3_wrk)
-    puts "Worker @hbase_wrk: #{@hbase_wrk.inspect}"
+
     has_rows = @hbase_wrk.table_has_rows?(table_name)
       
     if has_rows
