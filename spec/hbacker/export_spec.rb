@@ -26,6 +26,8 @@ describe Hbacker::Export do
     @hadoop_hm =  "/mnt/hadoop"
     @hbase_hm = "/mnt/hbase"
     @hbase_vsn = "0.20.3"
+    @reiteration_time = 15
+    @mapred_max_jobs = 10
   end
 
   describe Hbacker::Export, "specified_tables" do
@@ -38,18 +40,20 @@ describe Hbacker::Export do
       opts = {
         :session_name => @session_name,
         :dest_root => @dest_root,
-        :start => @start_time,
-        :end => @end_time,
+        :start_time => @start_time,
+        :end_time => @end_time,
         :tables => [@table_name],
         :workers_watermark => 10,
         :workers_timeout => timeout,
         :versions => @versions,
-        :timeout => timeout
+        :timeout => timeout,
+        :reiteration_time => @reiteration_time,
+        :mapred_max_jobs => @mapred_max_jobs
       }
       
       export = Hbacker::Export.new(@hbase_mock, @db_mock, @hbase_hm, @hbase_vsn, @hadoop_hm, @s3_mock)
       export.should_receive(:queue_table_export_job).with(@table_name, @start_time, @end_time, 
-        @destination, @versions, @session_name, timeout)
+        @destination, @versions, @session_name, timeout, @reiteration_time, @mapred_max_jobs)
       export.specified_tables(opts)
     end
   end

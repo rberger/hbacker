@@ -61,12 +61,12 @@ module Hbacker
       :type => :array, 
       :aliases => "-t", 
       :desc => "Space separated list of tables"
-    method_option :start, 
+    method_option :start_time, 
       :type => :numeric,
       :default => 0, 
       :aliases => "-s", 
       :desc => "Start time (millisecs since Unix Epoch)"
-    method_option :end, 
+    method_option :end_time, 
       :type => :numeric,
       :default => now_minus_60_sec, 
       :aliases => "-s", 
@@ -108,8 +108,8 @@ module Hbacker
       :desc => "Timeout for waiting for # of workers in Beanstalk Queue to get less than workers_watermark"
     method_option :workers_watermark,
       :type => :numeric,
-      :default => 1,
-      :desc => "Number of jobs that need to be ready before more jobs are added to the queue"
+      :default => 0,
+      :desc => "Export will wait until the number of ready jobs in the queue goes above this value before adding more Table Export jobs"
     method_option :reiteration_time,
       :type => :numeric,
       :default => 15,
@@ -155,12 +155,12 @@ module Hbacker
     method_option :tables, 
       :type => :array, 
       :aliases => "-t", 
-      :desc => "Space separated list of tables"
-    method_option :start, 
+      :desc => "Optional list of table names to import. Will import all tables that were exported for the specified session_name"
+    method_option :start_time, 
       :default => 0, 
       :aliases => "-s", 
       :desc => "Start time (millisecs since Unix Epoch)"
-    method_option :end, 
+    method_option :end_time, 
       :type => :numeric,
       :default => now_minus_60_sec, 
       :aliases => "-s", 
@@ -202,8 +202,8 @@ module Hbacker
       :desc => "Timeout for waiting for # of workers in Beanstalk Queue to get less than workers_watermark"
     method_option :workers_watermark,
       :type => :numeric,
-      :default => 1,
-      :desc => "Number of jobs that need to be ready before more jobs are added to the queue"
+      :default => 0,
+      :desc => "Export will wait until the number of ready jobs in the queue goes above this value before adding more Table Import jobs"
     method_option :reiteration_time,
       :type => :numeric,
       :default => 15,
@@ -213,15 +213,7 @@ module Hbacker
       config = setup(:import, options)
       imp = config[:export]
       
-      if options[:all]
-        imp.all_tables options
-      elsif options[:tables] && options[:dest_root]
-        imp.specified_tables options
-      else
-        Hbacker.log.error "Invalid option combination"
-        help
-        exit(-1)
-      end
+      imp.specified_tables options
     end
 
     desc "db", "Query Export Meta Info DB"

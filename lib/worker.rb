@@ -50,12 +50,14 @@ module Worker
       self.class.send(:define_method, k, proc{self.instance_variable_get("@#{k}")})
     end
 
+    puts "Worker First @hbase_mock: #{@hbase_mock.inspect} @hbase_wrk: #{@hbase_wrk.inspect}"
     
     @db_wrk ||= Hbacker::Db.new(aws_access_key_id, aws_secret_access_key, hbase_name, reiteration_time)
+    
     @hbase_wrk ||= Hbacker::Hbase.new(hbase_home, hadoop_home, hbase_host, hbase_port)
     @s3_wrk ||= Hbacker::S3.new(aws_access_key_id, aws_secret_access_key)
     @export_wrk ||= Hbacker::Export.new(@hbase_wrk, @db_wrk, hbase_home, hbase_version, hadoop_home, @s3_wrk)
-    
+    puts "Worker @hbase_wrk: #{@hbase_wrk.inspect}"
     has_rows = @hbase_wrk.table_has_rows?(table_name)
       
     if has_rows

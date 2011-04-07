@@ -34,15 +34,26 @@ module Hbacker
     end
     
     ##
-    # Iterates thru the list of tables calling Export#table to do the Export to the specified dest
-    # @param [Hash] opts Hash from the CLI with all the options set
+    # Master process to manage the Export of an HBase Cluster to the specified destination filesystem
+    # @param [Hash] opts All then need options to run the export. Usually build by CLI. The following options are used
+    # @option opts [String] :session_name
+    # @option opts [String] :dest_root
+    # @option opts [String] :start_time
+    # @option opts [String] :end_time
+    # @option opts [String] :tables
+    # @option opts [String] :workers_watermark
+    # @option opts [String] :workers_timeout
+    # @option opts [String] :versions
+    # @option opts [String] :timeout
+    # @option opts [String] :reiteration_time
+    # @option opts [String] :mapred_max_jobs
     #
     def specified_tables(opts)
       # begin
         Hbacker.log.debug "Export#specified_tables"
         opts = Hbacker.transform_keys_to_symbols(opts)
 
-        @db.start_info(:export, opts[:session_name], opts[:dest_root], opts[:start], opts[:end], Time.now.utc)
+        @db.start_info(:export, opts[:session_name], opts[:dest_root], opts[:start_time], opts[:end_time], Time.now.utc)
         opts[:tables].each do |table_name|
         
           dest = "#{opts[:dest_root]}#{opts[:session_name]}/#{table_name}/"
@@ -55,9 +66,9 @@ module Hbacker
             raise Timeout::Error, msg
           end
         
-          Hbacker.log.debug "Calling queue_table_export_job(#{table_name}, #{opts[:start]}, "+
-            "#{opts[:end]}, #{dest}, #{opts[:versions]}, #{opts[:session_name]})"
-          self.queue_table_export_job(table_name, opts[:start], opts[:end], dest, opts[:versions], 
+          Hbacker.log.debug "Calling queue_table_export_job(#{table_name}, #{opts[:start_time]}, "+
+            "#{opts[:end_time]}, #{dest}, #{opts[:versions]}, #{opts[:session_name]})"
+          self.queue_table_export_job(table_name, opts[:start_time], opts[:end_time], dest, opts[:versions], 
             opts[:session_name], opts[:timeout], opts[:reiteration_time], opts[:mapred_max_jobs])
         end
       # rescue Exception => exception
@@ -67,7 +78,7 @@ module Hbacker
     end
     
     ##
-    # Queue a ruby job to manage the Hbase/Hadoop job
+    # Queue a ruby job to manage the Hbase/Hadoop Export job
     def queue_table_export_job(table_name, start_time, end_time, destination, 
       versions, session_name, timeout, reiteration_time, mapred_max_jobs)
       args = {
