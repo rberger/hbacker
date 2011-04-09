@@ -11,7 +11,7 @@ describe Hbacker, "queue_table_export Stalker job" do
     end
     def job(j, &block)
       # STDERR.puts "JOB Top: @@handler: #{@@handler.inspect}"
-      @@handler = {}
+      @@handler ||= {}
       @@handler[j] = block
       @@handler
     end
@@ -28,7 +28,7 @@ describe Hbacker, "queue_table_export Stalker job" do
   end
   before :all do
     Hbacker.log.level = Logger::ERROR
-    require File.expand_path(File.join(File.dirname(__FILE__), "../../", "lib", "worker"))  
+    result = require File.expand_path(File.join(File.dirname(__FILE__), "../../", "lib", "worker"))  
 
     @tstargs = {
       :table_name => "furtive_production_consumer_events_00b2330f-d66e-0e38-a6bf-0c2b529a36a2",
@@ -74,6 +74,7 @@ describe Hbacker, "queue_table_export Stalker job" do
 
     @export_mock.should_receive(:table).with(@tstargs[:table_name], @tstargs[:start_time], 
       @tstargs[:end_time], @tstargs[:destination], @tstargs[:versions], @tstargs[:session_name])
+
     Stalker.handler['queue_table_export'].call(@tstargs)
   end
 

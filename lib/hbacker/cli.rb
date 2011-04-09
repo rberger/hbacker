@@ -208,6 +208,10 @@ module Hbacker
       :type => :numeric,
       :default => 15,
       :desc => "How many times the RightAws should try to complete an operation. Each time it backs off its delay by 2x"
+    method_option :restore_empty_tables,
+      :type => :boolean,
+      :desc => "Not yet implemented"
+      # :desc => "Enable the recreation of empty tables if the original source had empty tables"
     def import
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
       config = setup(:import, options)

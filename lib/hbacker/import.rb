@@ -16,32 +16,34 @@ module Hbacker
 
     ##
     # Master process to manage an Import session. Pulls data from :source_root Filesystem to specified HBase Cluster
-    # @param [Hash] opts All then need options to run the export. Usually build by CLI. The following options are used
-    # @option opts [String] :source_root Scheme://root_path of the Source directory of exports
-    # @option opts [String] :session_name Name of the export session to import
+    # @param [Hash] opts All then need options to run the import. Usually build by CLI. The following options are used
+    # @option opts [String] :source_root Scheme://root_path of the Source directory of previously exported data
+    # @option opts [String] :session_name Name of the previously exported session to import
     # 
     def specified_tables(opts)
       Hbacker.log.debug "Import#specified_tables"
       opts = Hbacker.transform_keys_to_symbols(opts)
       
-      export_table_names = @db.table_names(:export, opts[:session_name], opts[:source_root])
+      exported_table_names = @db.table_names(:export, opts[:session_name], opts[:source_root])
       if opt[:tables]
-      # Only export the tables specified in opts[:tables]
-        export_table_names = export_table_names & opt[:tables]
-        if export_table_names.lenght < opt[:tables].length
+      # Only import the tables specified in opts[:tables]
+        exported_table_names = exported_table_names & opt[:tables]
+        if exported_table_names.lenght < opt[:tables].length
           raise Thor::InvocationError, "One or more of the tables requested does not exist in this backup"
         end
       end
-      export_table_names.each do |table|
+      exported_table_names.each do |table|
         source = "#{opts[:source_root]}#{opts[:session_name]}/#{table}/"
-        Hbacker.log.info "Backing up #{table} to #{source}"
-        self.table(table, source)
+        Hbacker.log.debug "Calling queue_table_import_job(#{table_name}, #{opts[:start_time]}, "+
+          "#{opts[:end_time]}, #{dest}, #{opts[:versions]}, #{opts[:session_name]})"
+        self.queue_table_import_job(table_name, opts[:start_time], opts[:end_time], source, 
+          opts[:session_name], opts[:timeout], opts[:reiteration_time], opts[:mapred_max_jobs], opts[:restore_empty_tables])
       end
     end
     
     # Queue a ruby job to manage the Hbase/Hadoop Import job
     def queue_table_import_job(table_name, start_time, end_time, source, 
-      session_name, timeout, reiteration_time, mapred_max_jobs)
+      session_name, timeout, reiteration_time, mapred_max_jobs, restore_empty_tables)
       args = {
         :table_name => table_name,
         :start_time => start_time,
@@ -60,7 +62,8 @@ module Hbacker
         :s3 => @s3,
         :mapred_max_jobs => mapred_max_jobs,
         :log_level  => Hbacker.log.level,
-        :reiteration_time => reiteration_time
+        :reiteration_time => reiteration_time,
+        :restore_empty_tables => restore_empty_tables
       }
       Hbacker.log.debug "------- Stalker.enqueue('queue_table_import_job', args, {:ttr => #{timeout}})"
       Stalker.enqueue('queue_table_import_job', args, {:ttr => timeout}, true, :no_bury_for_error_handler => true)
@@ -72,8 +75,9 @@ module Hbacker
     # Uses Hadoop to import specfied table from source file system to target HBase Cluster
     # @param [String] table_name The name of the table to import
     # @param [String] source scheme://source_path/session_name/ to the export data
+    # @param [Boolean] Restore empty tables based on data stored in SimpleDB for the session
     #
-    def table(table_name, source)
+    def table(table_name, source, restore_empty_tables)
       
       table_status = @hbase.create_table(table_name, table_description)
       
