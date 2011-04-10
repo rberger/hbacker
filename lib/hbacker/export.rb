@@ -17,6 +17,8 @@ module Hbacker
       @hbase_version = hbase_version
     end
 
+    class ExportError < RuntimeError ; end
+
     ##
     # Querys HBase to get a list of all the tables in the cluser
     # Iterates thru the list calling Export#table to do the Export to the specified dest
@@ -53,7 +55,7 @@ module Hbacker
         Hbacker.log.debug "Export#specified_tables"
         opts = Hbacker.transform_keys_to_symbols(opts)
 
-        @db.start_info(:export, opts[:session_name], opts[:dest_root], opts[:start_time], opts[:end_time], Time.now.utc)
+        @db.start_info(opts[:session_name], opts[:dest_root], opts[:start_time], opts[:end_time], Time.now.utc)
         opts[:tables].each do |table_name|
         
           dest = "#{opts[:dest_root]}#{opts[:session_name]}/#{table_name}/"
@@ -63,7 +65,7 @@ module Hbacker
             msg = "Hbacker::Export#specified_tables: Timeout (#{opts[:workers_timeout]}) " +
               " waiting for workers in queue < opts[:workers_timeout]"
             Hbacker.log.error msg
-            raise Timeout::Error, msg
+            raise ExportError, msg
           end
         
           Hbacker.log.debug "Calling queue_table_export_job(#{table_name}, #{opts[:start_time]}, "+
@@ -130,13 +132,13 @@ module Hbacker
       if $?.exitstatus > 0
         Hbacker.log.error"Hadoop command failed:"
         Hbacker.log.error cmd_output
-        @db.table_info(:export, table_name, start_time, end_time, table_descriptor, versions, session_name, false, true)
+        @db.table_info(table_name, start_time, end_time, table_descriptor, versions, session_name, false, true)
         Hbacker.log.debug "About to save_info to s3: #{destination}hbacker_hadoop_error.log"
         @s3.save_info("#{destination}hbacker_hadoop_error.log", cmd_output)
-        raise StandardError, "Error running Haddop Command", caller
+        raise ExportError, "Error running Haddop Command", caller
       end
       
-      @db.table_info(:export, table_name, start_time, end_time, table_descriptor, versions, session_name, false, false)
+      @db.table_info(table_name, start_time, end_time, table_descriptor, versions, session_name, false, false)
       Hbacker.log.debug "About to save_info to s3: #{destination}hbacker_hadoop.log"
       @s3.save_info("#{destination}hbacker_hadoop.log", cmd_output)
     end

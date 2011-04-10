@@ -30,11 +30,6 @@ module Hbacker
       :default => false, 
       :aliases => "-d", 
       :desc => "Enable debug messages"
-    class_option :hbase_host, 
-      :type => :string, 
-      :default => "hbase-master0-staging.runa.com", 
-      :aliases => "-H",
-      :desc => "Host name of the host running the hbase-stargate server"
     class_option :aws_config, 
       :type => :string, 
       :default => "~/.aws/aws_config.yml", 
@@ -42,6 +37,11 @@ module Hbacker
       :desc => "Yaml file with aws credentials and other config"
 
     desc "export", "Export HBase table[s]."
+    method_option :export_hbase_host, 
+      :type => :string, 
+      :default => "hbase-master0-staging.runa.com", 
+      :aliases => "-H",
+      :desc => "Host name of the host running the hbase-stargate server and has the tables to be exported"
     method_option :all, 
       :type => :boolean, 
       :default => false, 
@@ -139,15 +139,24 @@ module Hbacker
 
     desc "import", "Import HBase table[s]."
     long_desc "Import HBase tables from a specified source. " +
-      "--source_root       must be specified as it shows what type file system and bucket/path to table data. " +
-      "If there are no --tables or --pattern specified, it will assume everything in " +
-      "contained in --source_root       is a directory representing a table"
-    method_option :source_root      , 
+      "If there are no --tables or --pattern specified, it will assume everything " +
+      "contained in --source_root/-session_name is a directory representing tables to be imported"
+    method_option :export_hbase_host, 
       :type => :string, 
-      :default => "s3n://runa-hbase-staging/", 
+      :default => "hbase-master0-staging.runa.com", 
+      :aliases => "-H",
+      :desc => "Host name of the hbase master / stargate server of the original Hbase cluster tables were exported from"
+    method_option :import_hbase_host, 
+      :type => :string, 
+      :required => true, 
+      :aliases => "-I",
+      :desc => "Hbase master / stargate host of the Hbase cluster that is the destinaton of the Import. Example: hbase-master0-staging.runa.com"
+    method_option :source_root, 
+      :type => :string, 
+      :required => true, 
       :aliases => "-S", 
       :required => true,
-      :desc  => "Source scheme://path", 
+      :desc  => "Source scheme://path. Example: s3n://runa-hbase-staging/", 
       :banner => "s3 | s3n | hdfs | file"
     method_option :pattern, 
       :type => :string, 
@@ -166,10 +175,9 @@ module Hbacker
       :aliases => "-s", 
       :desc => "End time (millisecs since Unix Epoch)"
     method_option :session_name, 
-      :default => @@export_timestamp,
+      :required => true,
       :type => :string,
-      :desc => "String to select the export session. Exp: 20110327_224341",
-      :banner => "STRING"
+      :desc => "String to select the export session. Exp: 20110327_224341"
     method_option :hbase_port, 
       :type => :numeric,
       :default => 8080, 
@@ -214,16 +222,17 @@ module Hbacker
       # :desc => "Enable the recreation of empty tables if the original source had empty tables"
     def import
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
+      raise Thor::MalformattedArgumentError, "Can not set bot --tables and --pattern" if options[:tables] && options[:pattern]
+ 
       config = setup(:import, options)
       imp = config[:export]
-      
       imp.specified_tables options
     end
 
     desc "db", "Query Export Meta Info DB"
     long_desc "Support functions to allow querying of the DB used to maintain information about exports" +
     "Options session_name and table_name allow the use of % for a wildcard at beginning and/or end"
-    method_option :hbase_host, 
+    method_option :export_hbase_host, 
       :type => :string, 
       :default => "hbase-master0-staging.runa.com", 
       :aliases => "-H",
@@ -246,16 +255,16 @@ module Hbacker
     def db
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
       
-      config = setup(:db, options)
-      db = config[:db]
-      # Hbacker.log.debug "db: #{db.inspect} config:"
+      config = setup(:export_db, options)
+      export_db = config[:export_db]
+      # Hbacker.log.debug "export_db: #{export_db.inspect} config:"
       # pp config if options[:debug]
       
       session_name = options[:session_name]
       table_name = options[:table_name]
       dest_root = options[:dest_root]
       
-      exports = db.session_info(:export, session_name)
+      exports = export_db.session_info(:export, session_name)
       
       exports.each do |export|
         session_name = export['session_name'].first
@@ -266,7 +275,7 @@ module Hbacker
         end
         puts "#{session_name}: #{attributes_string}"
         if table_name
-          tables = db.list_table_info(:export, session_name, dest_root, table_name)
+          tables = export_db.list_table_info(:export, session_name, dest_root, table_name)
           tables.each do |table|
             attributes_string = ""
             table.each_pair do |k,v|
@@ -287,21 +296,34 @@ module Hbacker
       #
       def setup(task, options)
         config = YAML.load_file(File.expand_path(options[:aws_config]))
-        hbase_name = options[:hbase_host].gsub(/[-\.]/, "_")
-        db = Hbacker::Db.new(config['access_key_id'], config['secret_access_key'], hbase_name, options[:reiteration_time])
-        hbase = Hbacker::Hbase.new(options[:hbase_home], options[:hadoop_home], options[:hbase_host], options[:hbase_port]) unless task == :db
+        
+        if [:export, :export_db, :import].inclue?(task)
+          export_hbase_name = options[:export_hbase_host].gsub(/[-\.]/, "_")
+          export_db = Hbacker::Db.new(config['access_key_id'], config['secret_access_key'], export_hbase_name, options[:reiteration_time])
+        end
+        
+        if [:import, :import_db].inclue?(task)
+          import_hbase_name = options[:import_hbase_host].gsub(/[-\.]/, "_")
+          import_db = Hbacker::Db.new(config['access_key_id'], config['secret_access_key'], import_hbase_name, options[:reiteration_time])
+        end
+        
+        unless [:export_db, :export_db].include?(task)
+          s3 = Hbacker::S3.new(config['access_key_id'], config['secret_access_key'])
+          hbase = Hbacker::Hbase.new(options[:hbase_home], options[:hadoop_home], options[:export_hbase_host], options[:hbase_port])
+        end
         
         case task
         when :export
-          s3 = Hbacker::S3.new(config['access_key_id'], config['secret_access_key'])
-          export = Export.new(hbase, db, options[:hbase_home], options[:hbase_version], options[:hadoop_home], s3)
-          config.merge({:hbase => hbase, :db => db, :hbase_name => hbase_name, :export => export})
+          export = Export.new(hbase, export_db, options[:hbase_home], options[:hbase_version], options[:hadoop_home], s3)
+          config.merge({:hbase => hbase, :export_db => export_db, :export_hbase_name => export_hbase_name, :export => export})
         when :import
-          s3 = Hbacker::S3.new(config['access_key_id'], config['secret_access_key'])
-          import = Import.new(hbase, db, options[:hbase_home], options[:hbase_version], options[:hadoop_home], s3)
-          config.merge({:hbase => hbase, :db => db, :hbase_name => hbase_name, :import => import})
-        when :db
-          config.merge({:hbase => hbase, :db => db, :hbase_name => hbase_name})
+          import_hbase_name = options[:import_hbase_host].gsub(/[-\.]/, "_")
+          import = Import.new(hbase, export_db, import_db, options[:hbase_home], options[:hbase_version], options[:hadoop_home], s3)
+          config.merge({:hbase => hbase, :export_db => export_db, :import_db => import_db, :import_hbase_name => import_hbase_name, :import => import})
+        when :export_db
+          config.merge({:export_db => export_db, :export_hbase_name => export_hbase_name})
+        when :import_db
+          config.merge({:import_db => import_db, :import_hbase_name => import_hbase_name})
         else
           Hbacker.log.error "Invalid task in CLI#setup: #{task}"
           exit(-1)

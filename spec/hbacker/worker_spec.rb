@@ -57,16 +57,16 @@ describe Hbacker, "queue_table_export Stalker job" do
   before :each do
     # Can not do mocks in before :all
     @hbase_mock = mock('@hbase_mock')
-     @table_descriptor = mock('@table_descriptor')
-     @hbase_mock.stub(:wait_for_mapred_queue).and_return(:ok)
-     @hbase_mock.stub(:table_descriptor).and_return(@table_descriptor)
-     Hbacker::Hbase.stub(:new).and_return(@hbase_mock)
-     @s3_mock = mock('@s3_mock')
-     Hbacker::S3.stub(:new).and_return(@s3_mock)
-     @db_mock = mock('@db_mock')
-     Hbacker::Db.stub(:new).and_return(@db_mock)
-     @export_mock = mock('@export_mock')
-     Hbacker::Export.stub(:new).and_return(@export_mock)
+    @table_descriptor = mock('@table_descriptor')
+    @hbase_mock.stub(:wait_for_mapred_queue).and_return(:ok)
+    @hbase_mock.stub(:table_descriptor).and_return(@table_descriptor)
+    Hbacker::Hbase.stub(:new).and_return(@hbase_mock)
+    @s3_mock = mock('@s3_mock')
+    Hbacker::S3.stub(:new).and_return(@s3_mock)
+    @db_mock = mock('@db_mock')
+    Hbacker::Db.stub(:new).and_return(@db_mock)
+    @export_mock = mock('@export_mock')
+    Hbacker::Export.stub(:new).and_return(@export_mock)
   end
 
   it "should build a proper Hbacker::Export#table command when table not empty" do
@@ -81,7 +81,7 @@ describe Hbacker, "queue_table_export Stalker job" do
   it "should build a proper Hbacker::Db#table_info command when table is empty" do
     @hbase_mock.stub(:table_has_rows?).with(@tstargs[:table_name]).and_return(false)
     
-    @db_mock.should_receive(:table_info).with(:export, @tstargs[:table_name], 
+    @db_mock.should_receive(:table_info).with(@tstargs[:table_name], 
     @tstargs[:start_time], @tstargs[:end_time], @table_descriptor, @tstargs[:versions], 
       @tstargs[:session_name], true, false)
 

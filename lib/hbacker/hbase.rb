@@ -16,6 +16,8 @@ module Hbacker
       @stargate = Stargate::Client.new(@url)
     end
 
+    class HbaseError < RuntimeError ; end
+
     ##
     # Get the Stargate::Model::TableDescriptor of the specified table from HBase
     def table_descriptor(table_name)

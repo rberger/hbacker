@@ -7,6 +7,8 @@ module Worker
   require "hbacker"
   require 'logger'
   
+  class WorkerError < RuntimeError ; end
+
   ##
   # Stalker Job to do the work of starting a Hadoop Job to export an HBase Table
   # @param [Hash] args
@@ -19,7 +21,7 @@ module Worker
   # @option [String] :stargate_url Full Schema/Path:Port URL to access the HBase stargate server
   # @option [String] :aws_access_key_id AWS key
   # @option [String] :aws_secret_access_key AWS secret
-  # @option [String] :hbase_name Canonicalized HBase Cluster Name of the Export source
+  # @option [String] :export_hbase_name Canonicalized HBase Cluster Name of the Export source
   # @option [String] :hbase_host HBase Master Hostname
   # @option [String] :hbase_port HBase Master Host Port
   # @option [String] :hbase_home Hadoop Home Directory
@@ -45,7 +47,7 @@ module Worker
     # Hack to get around issues testing this module
     @db_wrk = @hbase_wrk = @s3_wrk = @export_wrk = nil if a[:reset_instance_vars]
     
-    @db_wrk ||= Hbacker::Db.new(a[:aws_access_key_id], a[:aws_secret_access_key], a[:hbase_name], a[:reiteration_time])
+    @db_wrk ||= Hbacker::Db.new(a[:aws_access_key_id], a[:aws_secret_access_key], a[:export_hbase_name], a[:reiteration_time])
     
     @hbase_wrk ||= Hbacker::Hbase.new(a[:hbase_home], a[:hadoop_home], a[:hbase_host], a[:hbase_port])
     @s3_wrk ||= Hbacker::S3.new(a[:aws_access_key_id], a[:aws_secret_access_key])
@@ -55,14 +57,14 @@ module Worker
       
     if has_rows
       if @hbase_wrk.wait_for_mapred_queue(a[:mapred_max_jobs], 10000, 2) != :ok
-        raise Exception, "Timedout waiting #{10000 *2} seconds for Hadoop Map Reduce Queue to be less than #{a[:mapred_max_jobs]} jobs"
+        raise WorkerError, "Export Timedout waiting #{10000 *2} seconds for Hadoop Map Reduce Queue to be less than #{a[:mapred_max_jobs]} jobs"
       end
       Hbacker.log.info "Backing up #{a[:table_name]} to #{a[:destination]}"
       @export_wrk.table(a[:table_name], a[:start_time], a[:end_time], a[:destination], a[:versions], a[:session_name])
     else
       table_descriptor = @hbase_wrk.table_descriptor(a[:table_name])
       Hbacker.log.warn "Worker#queue_table_export: Table: #{a[:table_name]} is empty. Recording in Db but not backing up"
-      @db_wrk.table_info(:export, a[:table_name], a[:start_time], a[:end_time], table_descriptor,  a[:versions], a[:session_name], true, false)
+      @db_wrk.table_info(a[:table_name], a[:start_time], a[:end_time], table_descriptor,  a[:versions], a[:session_name], true, false)
     end
   end
   
@@ -76,7 +78,8 @@ module Worker
   # @option [String] :stargate_url Full Schema/Path:Port URL to access the HBase stargate server
   # @option [String] :aws_access_key_id AWS key
   # @option [String] :aws_secret_access_key AWS secret
-  # @option [String] :hbase_name Canonicalized HBase Cluster Name of the Import Destination
+  # @option [String] :export_hbase_name Canonicalized HBase Cluster Name of the Export Destination
+  # @option [String] :import_hbase_name Canonicalized HBase Cluster Name of the Import Destination
   # @option [String] :hbase_host HBase Master Hostname
   # @option [String] :hbase_port HBase Master Host Port
   # @option [String] :hbase_home Hadoop Home Directory
@@ -100,27 +103,20 @@ module Worker
     end
 
     # Hack to get around issues testing this module
-    @db_wrk = @hbase_wrk = @s3_wrk = @import_wrk = nil if a[:reset_instance_vars]
+    @export_db_wrk = @import_db_wrk = @hbase_wrk = @s3_wrk = @import_wrk = nil if a[:reset_instance_vars]
     
-    @db_wrk ||= Hbacker::Db.new(a[:aws_access_key_id], a[:aws_secret_access_key], a[:hbase_name], a[:reiteration_time])
+    @export_db_wrk ||= Hbacker::Db.new(:export, a[:aws_access_key_id], a[:aws_secret_access_key], a[:export_hbase_name], a[:reiteration_time])
+    @import_db_wrk ||= Hbacker::Db.new(:import, a[:aws_access_key_id], a[:aws_secret_access_key], a[:import_hbase_name], a[:reiteration_time])
     
     @hbase_wrk ||= Hbacker::Hbase.new(a[:hbase_home], a[:hadoop_home], a[:hbase_host], a[:hbase_port])
     @s3_wrk ||= Hbacker::S3.new(a[:aws_access_key_id], a[:aws_secret_access_key])
-    @import_wrk ||= Hbacker::Import.new(@hbase_wrk, @db_wrk, a[:hbase_home], a[:hbase_version], a[:hadoop_home], @s3_wrk)
+    @import_wrk ||= Hbacker::Import.new(@hbase_wrk, @export_db_wrk, @import_db_wrk, a[:hbase_home], a[:hbase_version], a[:hadoop_home], @s3_wrk)
 
-    table_status = @s3_wrk.list_table_info(:export, a[:table_name])
-      
-    if has_rows
-      if @hbase_wrk.wait_for_mapred_queue(a[:mapred_max_jobs], 10000, 2) != :ok
-        raise Exception, "Timedout waiting #{10000 *2} seconds for Hadoop Map Reduce Queue to be less than #{a[:mapred_max_jobs]} jobs"
-      end
-      Hbacker.log.info "Backing up #{a[:table_name]} to #{a[:source]}"
-      @import_wrk.table(a[:table_name], a[:start_time], a[:end_time], a[:source], a[:versions], a[:session_name])
-    else
-      table_descriptor = @hbase_wrk.table_descriptor(a[:table_name])
-      Hbacker.log.warn "Worker#queue_table_import: Table: #{table_name} is empty. Recording in Db but not backing up"
-      @db_wrk.table_info(:import, a[:table_name], a[:start_time], a[:end_time], table_descriptor,  a[:versions], a[:session_name], true, false)
+    if @hbase_wrk.wait_for_mapred_queue(a[:mapred_max_jobs], 10000, 2) != :ok
+      raise WorkerError, "Import Timedout waiting #{10000 *2} seconds for Hadoop Map Reduce Queue to be less than #{a[:mapred_max_jobs]} jobs"
     end
+    Hbacker.log.info "Importing  #{a[:table_name]} from #{a[:source]}"
+    @import_wrk.table(a[:table_name], a[:start_time], a[:end_time], a[:source], a[:versions], a[:session_name])
   end
   
 end

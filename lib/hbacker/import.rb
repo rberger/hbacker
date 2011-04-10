@@ -5,26 +5,30 @@ module Hbacker
     ##
     # Initialize the Import Instance
     #
-    def initialize(hbase, db, hbase_home, hbase_version, hadoop_home, s3)
+    def initialize(hbase, export_db, import_db, hbase_home, hbase_version, hadoop_home, s3)
       @hbase = hbase
-      @db = db
+      @export_db = export_db
+      @import_db = export_db
       @hadoop_home = hadoop_home
       @hbase_home = hbase_home
       @hbase_version = hbase_version
       @s3 = s3
     end
 
+    class ImportError < RuntimeError ; end
+
     ##
     # Master process to manage an Import session. Pulls data from :source_root Filesystem to specified HBase Cluster
     # @param [Hash] opts All then need options to run the import. Usually build by CLI. The following options are used
     # @option opts [String] :source_root Scheme://root_path of the Source directory of previously exported data
+    # @option opts [String] :session_name Name of the previously exported session to import
     # @option opts [String] :session_name Name of the previously exported session to import
     # 
     def specified_tables(opts)
       Hbacker.log.debug "Import#specified_tables"
       opts = Hbacker.transform_keys_to_symbols(opts)
       
-      exported_table_names = @db.table_names(:export, opts[:session_name], opts[:source_root])
+      exported_table_names = @export_db.table_names(:export, opts[:session_name], opts[:source_root])
       if opt[:tables]
       # Only import the tables specified in opts[:tables]
         exported_table_names = exported_table_names & opt[:tables]
@@ -51,9 +55,9 @@ module Hbacker
         :source => source,
         :session_name => session_name,
         :stargate_url => @hbase.url,
-        :aws_access_key_id => @db.aws_access_key_id,
-        :aws_secret_access_key => @db.aws_secret_access_key,
-        :hbase_name => @db.hbase_name,
+        :aws_access_key_id => @export_db.aws_access_key_id,
+        :aws_secret_access_key => @export_db.aws_secret_access_key,
+        :export_hbase_name => @export_db.hbase_name,
         :hbase_host => @hbase.hbase_host,
         :hbase_port => @hbase.hbase_port,
         :hbase_home => @hbase_home,
@@ -68,14 +72,12 @@ module Hbacker
       Hbacker.log.debug "------- Stalker.enqueue('queue_table_import_job', args, {:ttr => #{timeout}})"
       Stalker.enqueue('queue_table_import_job', args, {:ttr => timeout}, true, :no_bury_for_error_handler => true)
     end
-    
-    
-    
+
     ##
     # Uses Hadoop to import specfied table from source file system to target HBase Cluster
     # @param [String] table_name The name of the table to import
     # @param [String] source scheme://source_path/session_name/ to the export data
-    # @param [Boolean] Restore empty tables based on data stored in SimpleDB for the session
+    # @param [Boolean] Restore empty tables based on data stored in SimpleDB for the session (Not Implemented)
     #
     def table(table_name, source, restore_empty_tables)
       
@@ -92,7 +94,7 @@ module Hbacker
         Hbacker.log.error"Hadoop command failed: #{cmd}"
         Hbacker.log.error cmd_output
         @s3.save_info("#{destination}hbacker_hadoop_import_error_#{import_session_name}.log", cmd_output)
-        raise StandardError, "Error running Haddop Command", caller
+        raise ImportError, "Error running Haddop Command", caller
       end
       @s3.save_info("#{destination}hbacker_hadoop_error.log", cmd_output)
     end
