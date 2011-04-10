@@ -105,18 +105,23 @@ module Worker
     # Hack to get around issues testing this module
     @export_db_wrk = @import_db_wrk = @hbase_wrk = @s3_wrk = @import_wrk = nil if a[:reset_instance_vars]
     
-    @export_db_wrk ||= Hbacker::Db.new(:export, a[:aws_access_key_id], a[:aws_secret_access_key], a[:export_hbase_name], a[:reiteration_time])
-    @import_db_wrk ||= Hbacker::Db.new(:import, a[:aws_access_key_id], a[:aws_secret_access_key], a[:import_hbase_name], a[:reiteration_time])
+    @export_db_wrk ||= Hbacker::Db.new(:export, a[:aws_access_key_id], a[:aws_secret_access_key], 
+      a[:export_hbase_name], a[:reiteration_time])
+    @import_db_wrk ||= Hbacker::Db.new(:import, a[:aws_access_key_id], a[:aws_secret_access_key], 
+      a[:import_hbase_name], a[:reiteration_time])
+      
+    table_description = @import_db_wrk.column_descriptors(a[:table_name], a[:session_name])
     
     @hbase_wrk ||= Hbacker::Hbase.new(a[:hbase_home], a[:hadoop_home], a[:hbase_host], a[:hbase_port])
     @s3_wrk ||= Hbacker::S3.new(a[:aws_access_key_id], a[:aws_secret_access_key])
-    @import_wrk ||= Hbacker::Import.new(@hbase_wrk, @export_db_wrk, @import_db_wrk, a[:hbase_home], a[:hbase_version], a[:hadoop_home], @s3_wrk)
+    @import_wrk ||= Hbacker::Import.new(@hbase_wrk, @export_db_wrk, @import_db_wrk, a[:hbase_home], 
+      a[:hbase_version], a[:hadoop_home], @s3_wrk)
 
     if @hbase_wrk.wait_for_mapred_queue(a[:mapred_max_jobs], 10000, 2) != :ok
       raise WorkerError, "Import Timedout waiting #{10000 *2} seconds for Hadoop Map Reduce Queue to be less than #{a[:mapred_max_jobs]} jobs"
     end
-    Hbacker.log.info "Importing  #{a[:table_name]} from #{a[:source]}"
-    @import_wrk.table(a[:table_name], a[:start_time], a[:end_time], a[:source], a[:versions], a[:session_name])
+    Hbacker.log.info "Importing  #{a[:table_name]} from #{a[:source]} import_session: #{ a[:import_session_name]}"
+    @import_wrk.table(a[:table_name], a[:source], a[:import_session_name], table_description)
   end
   
 end

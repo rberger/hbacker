@@ -219,6 +219,10 @@ module Hbacker
     method_option :restore_empty_tables,
       :type => :boolean,
       :desc => "Not yet implemented"
+    method_option :import_session_name, 
+      :type => :string,
+      :default => export_timestamp,
+      :desc => "Timestamp for the import session"
       # :desc => "Enable the recreation of empty tables if the original source had empty tables"
     def import
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN

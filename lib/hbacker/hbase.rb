@@ -17,7 +17,7 @@ module Hbacker
     end
 
     class HbaseError < RuntimeError ; end
-
+    class 
     ##
     # Get the Stargate::Model::TableDescriptor of the specified table from HBase
     def table_descriptor(table_name)
@@ -63,6 +63,7 @@ module Hbacker
         result = @stargate.create_table(name, schema)
       rescue Stargate::TableExistsError => e
         Hbacker.log.warn "Hbacker::Hbase#create_table: Table #{name} already exists. Continuing"
+        raise HbaseError, "Table Already Exists"
         status = {:exists =>  @stargate.show_table(name)}
         return status
       rescue Stargate::TableFailCreateError => e

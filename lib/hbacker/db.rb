@@ -205,7 +205,7 @@ module Hbacker
     # @param (see #table_names)
     # @return [Hash] The hash of attributes found
     #
-    def column_descriptors(table_name, session_name, dest_root)
+    def column_descriptors(table_name, session_name)
       results = {}
       case @mode
       when :export
@@ -214,7 +214,7 @@ module Hbacker
         klass = ImportedColumnDescriptor
       end
 
-      klass.find_all_by_session_name_and_dest_root_and_table_name(session_name, dest_root, table_name).each do |t|
+      klass.find_all_by_session_name_and_table_name(session_name, table_name).each do |t|
         t.reload
         t.each_pair do |k,v|
           results.merge(k.to_sym => v) if Stargate::Model::ColumnDescriptor.AVAILABLE_OPTS[k]
