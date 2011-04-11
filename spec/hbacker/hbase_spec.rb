@@ -11,6 +11,7 @@ describe Hbacker::Hbase, "initialize" do
     @hbase_hm = "/mnt/hbase"
     @hadoop_hm = "/mnt/hadoop"
     @stargate = mock('@stargate')
+    @stargate.stub(:cluster_version)
     Stargate::Client.stub(:new).and_return(@stargate)
   end
   

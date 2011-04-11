@@ -15,7 +15,7 @@ module Hbacker
       @s3 = s3
     end
 
-    class ImportError < RuntimeError ; end
+    class ImportError < HbackerError ; end
     class QueueTimeoutError < ImportError ; end
     class TableCreateError < ImportError ; end
 

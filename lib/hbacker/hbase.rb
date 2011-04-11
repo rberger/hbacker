@@ -4,6 +4,11 @@ module Hbacker
   class Hbase
     attr_reader :hbase_home, :hadoop_home, :star_gate, :url, :hbase_host, :hbase_port
 
+    class HbaseError < HbackerError ; end
+    class HbaseConnectionError < HbackerError; end
+    class TableExistsError < HbaseError; end
+    class TableFailCreateError < HbaseError; end
+    
     def initialize(hbase_home, hadoop_home, hbase_host, hbase_port=nil)
       @hbase_home = hbase_home
       @hadoop_home = hadoop_home
@@ -14,12 +19,14 @@ module Hbacker
 
       Hbacker.log.debug "@stargate = Stargate::Client.new(#{@url.inspect})"
       @stargate = Stargate::Client.new(@url)
+      begin
+        version = @stargate.cluster_version
+      rescue Exception => e
+        Hbacker.log.error "Exception on first connection to #{hbase_host}: #{e.inspect}"
+        raise HbaseConnectionError, e.message
+      end
     end
 
-    class HbaseError < RuntimeError ; end
-    class TableExistsError < HbaseError; end
-    class TableFailCreateError < HbaseError; end
-    
     ##
     # Get the Stargate::Model::TableDescriptor of the specified table from HBase
     def table_descriptor(table_name)

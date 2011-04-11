@@ -17,7 +17,7 @@ module Hbacker
       @hbase_version = hbase_version
     end
 
-    class ExportError < RuntimeError ; end
+    class ExportError < HbackerError ; end
     class QueueTimeoutError < ExportError ; end
 
     ##

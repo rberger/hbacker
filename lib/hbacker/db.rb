@@ -45,7 +45,7 @@ module Hbacker
       end
     end
     
-    class DbError < RuntimeError ; end
+    class DbError < HbackerError ; end
     
     # Records Exported HBase Table Info into SimpleDB table
     # @param [String] table_name Name of the HBase Table

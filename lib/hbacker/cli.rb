@@ -74,8 +74,7 @@ module Hbacker
     method_option :session_name, 
       :default => @@export_timestamp,
       :type => :string,
-      :desc => "String to select the export session. Exp: 20110327_224341",
-      :banner => "STRING"
+      :desc => "String to select the export session. Exp: 20110327_224341"
     method_option :hbase_port, 
       :type => :numeric,
       :default => 8080, 
@@ -156,8 +155,7 @@ module Hbacker
       :required => true, 
       :aliases => "-S", 
       :required => true,
-      :desc  => "Source scheme://path. Example: s3n://runa-hbase-staging/", 
-      :banner => "s3 | s3n | hdfs | file"
+      :desc  => "Source scheme://path. Example: s3n://runa-hbase-staging/"
     method_option :pattern, 
       :type => :string, 
       :desc => "SQL Wildcard (%) for the table name within the Source scheme://path/session_name/ Exp: %summary%"
@@ -245,12 +243,10 @@ module Hbacker
     method_option :table_name,
       :type => :string,
       :desc => "Optional. Used to limit which tables will be displayed " +
-        "Exp: %staging_consumer_events%",
-      :banner => "STRING"
-    method_option :session_name, 
+        "Exp: %staging_consumer_events%"
+    method_option :session_name,
       :type => :string,
-      :desc => "String to select the export session. Exp: 20110327_%",
-      :banner => "STRING"
+      :desc => "String to select the export session. Exp: 20110327_%"
     method_option :dest_root,
       :type => :string,
       :desc => "Limit exports to ones that saved in this locaiton",
@@ -299,40 +295,47 @@ module Hbacker
       # Uses options and/or configuration files
       #
       def setup(task, options)
-        config = YAML.load_file(File.expand_path(options[:aws_config]))
+        beanstalkd_status = `pgrep beanstalkd`
+        raise Thor::InvocationError, "Invalid Setup: beanstalkd needs to be running" unless $?.exitstatus == 0
+        begin
+          config = YAML.load_file(File.expand_path(options[:aws_config]))
         
-        if [:export, :export_db, :import].inclue?(task)
-          export_hbase_name = options[:export_hbase_host].gsub(/[-\.]/, "_")
-          export_db = Hbacker::Db.new(config['access_key_id'], config['secret_access_key'], export_hbase_name, options[:reiteration_time])
-        end
+          if [:export, :export_db, :import].include?(task)
+            export_hbase_name = options[:export_hbase_host].gsub(/[-\.]/, "_")
+            export_db = Hbacker::Db.new(:export, config['access_key_id'], config['secret_access_key'], export_hbase_name, options[:reiteration_time])
+          end
         
-        if [:import, :import_db].inclue?(task)
-          import_hbase_name = options[:import_hbase_host].gsub(/[-\.]/, "_")
-          import_db = Hbacker::Db.new(config['access_key_id'], config['secret_access_key'], import_hbase_name, options[:reiteration_time])
-        end
+          if [:import, :import_db].include?(task)
+            import_hbase_name = options[:import_hbase_host].gsub(/[-\.]/, "_")
+            import_db = Hbacker::Db.new(:import, config['access_key_id'], config['secret_access_key'], import_hbase_name, options[:reiteration_time])
+          end
         
-        unless [:export_db, :export_db].include?(task)
-          s3 = Hbacker::S3.new(config['access_key_id'], config['secret_access_key'])
-          hbase = Hbacker::Hbase.new(options[:hbase_home], options[:hadoop_home], options[:export_hbase_host], options[:hbase_port])
-        end
+          unless [:export_db, :export_db].include?(task)
+            s3 = Hbacker::S3.new(config['access_key_id'], config['secret_access_key'])
+            hbase = Hbacker::Hbase.new(options[:hbase_home], options[:hadoop_home], options[:export_hbase_host], options[:hbase_port])
+          end
         
-        case task
-        when :export
-          export = Export.new(hbase, export_db, options[:hbase_home], options[:hbase_version], options[:hadoop_home], s3)
-          config.merge({:hbase => hbase, :export_db => export_db, :export_hbase_name => export_hbase_name, :export => export})
-        when :import
-          import_hbase_name = options[:import_hbase_host].gsub(/[-\.]/, "_")
-          import = Import.new(hbase, export_db, import_db, options[:hbase_home], options[:hbase_version], options[:hadoop_home], s3)
-          config.merge({:hbase => hbase, :export_db => export_db, :import_db => import_db, :import_hbase_name => import_hbase_name, :import => import})
-        when :export_db
-          config.merge({:export_db => export_db, :export_hbase_name => export_hbase_name})
-        when :import_db
-          config.merge({:import_db => import_db, :import_hbase_name => import_hbase_name})
-        else
-          Hbacker.log.error "Invalid task in CLI#setup: #{task}"
-          exit(-1)
+          case task
+          when :export
+            export = Export.new(hbase, export_db, options[:hbase_home], options[:hbase_version], options[:hadoop_home], s3)
+            config.merge({:hbase => hbase, :export_db => export_db, :export_hbase_name => export_hbase_name, :export => export})
+          when :import
+            import_hbase_name = options[:import_hbase_host].gsub(/[-\.]/, "_")
+            import = Import.new(hbase, export_db, import_db, options[:hbase_home], options[:hbase_version], options[:hadoop_home], s3)
+            config.merge({:hbase => hbase, :export_db => export_db, :import_db => import_db, :import_hbase_name => import_hbase_name, :import => import})
+          when :export_db
+            config.merge({:export_db => export_db, :export_hbase_name => export_hbase_name})
+          when :import_db
+            config.merge({:import_db => import_db, :import_hbase_name => import_hbase_name})
+          else
+            Hbacker.log.error "Invalid task in CLI#setup: #{task}"
+            exit(-1)
+          end
+        rescue Hbase::HbaseConnectionError => e
+          raise Thor::InvocationError, e.message
         end
       end
+
     end
   end
 end
