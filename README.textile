@@ -8,13 +8,97 @@ See doc/Proposed_HBase_Export_using_HBASE-1684.txt for the plan
 
 h2. Dependencies
 
-* hbase-stargate
 * hbase 0.20.3 - hbase 0.90.x
 * hadoop 0.20.2
+* Stargate installed on hbase master
+* beanstalkd
+* beanstalkd ruby gem
+* stalker ruby gem
 * AWS SimpleDB
-* right_aws
-* yard
-* bundler
+* right_aws ruby gem
+* hbase-stargate ruby gem
+* right_aws ruby gem
+* yard ruby gem
+* bundler ruby gem
+
+h2. Setting up Prerequisites
+
+h3. Stargate
+
+From the hbase_stargate docs:
+
+# Download and unpack the most recent release of HBase from http://hadoop.apache.org/hbase/releases.html#Download
+# Edit /conf/hbase-env.sh and uncomment/modify the following line to correspond to your Java home path: export JAVA_HOME=/usr/lib/jvm/java-6-sun
+# Copy /contrib/stargate/hbase--stargate.jar into /lib
+# Copy all the files in the /contrib/stargate/lib folder into /lib
+# Start up HBase: $ ${HBASE_HOME}/bin/start-hbase.sh
+# Start up Stargate (append “-p 1234” at the end if you want to change the port from 8080 default): $ /bin/hbase org.apache.hadoop.hbase.stargate.Main
+
+h3. beanstalkd
+
+h4. If you are lucky (Unbuntu 10 onward)
+<code>apt-get install beanstalkd</code>
+
+h4. From source (only tested on Ubuntu 9.10)
+
+<pre><code>
+sudo apt-get update
+sudo apt-get install libevent-1.4-2 libevent-dev 
+wget --no-check-certificate https://github.com/downloads/kr/beanstalkd/beanstalkd-1.4.6.tar.gz
+tar xzf beanstalkd-1.4.6.tar.gz
+cd beanstalkd-1.4.6
+./configure
+make
+</code></pre>
+
+h3. Configure HDFS to have S3 credentials
+
+Assuming you will be using S3 for storing the backups, you'll need to give hadoop hdfs proper access to S3. You will need to update ${HADOOP_HOME}/conf/hdfs-site.xml with something like:
+
+<pre><code>
+  <property>
+    <name>fs.s3.awsAccessKeyId</name>
+    <value>YourAwsAccessKeyId</value>
+  </property>
+
+  <property>
+    <name>fs.s3.awsSecretAccessKey</name>
+    <value>YourAwsSecretAccessKey</value>
+  </property>
+
+  <property>
+    <name>fs.s3n.awsAccessKeyId</name>
+    <value>YourAwsAccessKeyId</value>
+  </property>
+
+  <property>
+    <name>fs.s3n.awsSecretAccessKey</name>
+    <value>YourAwsSecretAccessKey</value>
+  </property>
+</code></pre>
+
+You can use AWS IAM to create a user and policy to just allow Hadoop to access specific buckets and so on. That's a tutorial all on its own.
+
+h2. Starting things
+
+h3. Have beanstalkd running
+
+<code>beanstalkd -d</code> will run beanstalk in daemon mode on port 11300
+
+h3. Start the workers
+
+
+A worker job is based on a single HBase Table. Normally it will record the start, status and table schema to SimpleDb and then run the Hadoop job to export or import the table. It waits around to handle errors and record the completion.
+
+The number of workers you spawn should be around the number of simultaneous Tables your Hadoop Cluster can operate on parallel. A big table (having a lot of rows and/or non-nil columns) will use multipe Map / Reduce jobs at once. So its a bit hard to figure it all out in advance.
+
+The Hbacker master process will stop making more job requests if the Hadoop cluster gets too busy or if the Hbacker worker queue starts to backup. But its not very scientific yet... There are a bunch of hbacker command line parameters you can override some of this behavior.
+
+Right now the easiest way to start the workers is something like this on the machine that will be making the hadoop requests (The hbase master works fine for this). Run it as a user that has the proper permissions to run the hadoop hbase jobs
+
+
+This will run 16 workers:
+<code>for i in {1..16}; do hbacker_worker  > worker_$i.log 2>&1 &  done</code>
 
 h2. Copyright
 
