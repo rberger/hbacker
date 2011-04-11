@@ -78,6 +78,7 @@ module Hbacker
         Hbacker.log.error "Hbacker::Export#specified_tables: EXCEPTION: #{e.inspect}"
         Hbacker.log.error caller.join("\n")
         @db.end_info(opts[:session_name], opts[:dest_root], Time.now.utc, {:info => "#{e.class}: #{e.message}"})
+        raise ExportError, "#{e.class}: #{e.message}"
       end
       @db.end_info(opts[:session_name], opts[:dest_root], Time.now.utc)
     end
@@ -96,7 +97,7 @@ module Hbacker
         :stargate_url => @hbase.url,
         :aws_access_key_id => @db.aws_access_key_id,
         :aws_secret_access_key => @db.aws_secret_access_key,
-        :hbase_name => @db.hbase_name,
+        :export_hbase_name => @db.hbase_name,
         :hbase_host => @hbase.hbase_host,
         :hbase_port => @hbase.hbase_port,
         :hbase_home => @hbase_home,

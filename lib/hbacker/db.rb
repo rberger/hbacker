@@ -18,7 +18,6 @@ module Hbacker
       @aws_secret_access_key =aws_secret_access_key
       @hbase_name = hbase_name
       @db_count ||= 0
-      Hbacker.log.debug "Db.new @db_count: #{@db_count}"
       @db_count += 1
       
       if @mode == :export
@@ -71,7 +70,7 @@ module Hbacker
         :specified_versions => versions,
         :updated_at => now
       }
-      ExportSession.create(table_info)
+      ExportedHbaseTable.create(table_info)
       
       if table_descriptor
         table_descriptor.column_families_to_hashes.each do |column|
@@ -105,7 +104,7 @@ module Hbacker
         :updated_at => now
       }
       
-      ImportSession.create(table_info)
+      ImportedHbaseTable.create(table_info)
       
       if table_descriptor
         table_descriptor.column_families_to_hashes.each do |column|
@@ -163,13 +162,14 @@ module Hbacker
         klass = ImportSession
       end
       
-      info = klass.find_by_name_and_dest_root(session_name, dest_root)
+      info = klass.find_by_cluster_name_and_session_name_and_dest_root(@hbase_name, session_name, dest_root)
       info.reload
-      info[:error] = error.empty? ? false : true
-      info[:error_info] = error.empty? ? nil : error[:info]
-      info[:ended_at] = ended_at
-      info[:updated_at] = now
-      info.save
+      info.save_attributes(
+      :error => error.empty? ? false : true,
+      :error_info => error.empty? ? nil : error[:info],
+      :ended_at => ended_at,
+      :updated_at => now
+      )
     end
   
     # Returns a list of names of tables backed up during the specified session

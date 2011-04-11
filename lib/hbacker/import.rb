@@ -64,6 +64,7 @@ module Hbacker
         Hbacker.log.error "Hbacker::Import#specified_tables: EXCEPTION: #{e.inspect}"
         Hbacker.log.error caller.join("\n")
         @import_db.end_info(opts[:session_name], opts[:dest_root], Time.now.utc, {:info => "#{e.class}: #{e.message}"})
+        raise ImportError, "#{e.class}: #{e.message}"
       end
       @import_db.end_info(opts[:session_name], opts[:dest_root], Time.now.utc)
     end
@@ -80,6 +81,7 @@ module Hbacker
         :aws_access_key_id => @export_db.aws_access_key_id,
         :aws_secret_access_key => @export_db.aws_secret_access_key,
         :export_hbase_name => @export_db.hbase_name,
+        :import_hbase_name => @import_db.hbase_name,
         :hbase_host => @hbase.hbase_host,
         :hbase_port => @hbase.hbase_port,
         :hbase_home => @hbase_home,

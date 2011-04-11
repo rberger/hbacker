@@ -34,7 +34,7 @@ module Hbacker
         bs = Stalker.beanstalk
         loop do
           stats = Hbacker.transform_keys_to_symbols(bs.stats_tube(queue_name))
-          break if stats[:current_jobs_ready] < threshold
+          break if stats[:current_waiting] > threshold
         end
       end
     rescue Timeout::Error

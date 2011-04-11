@@ -49,7 +49,7 @@ module Hbacker
       :desc => "All tables in HBase"
     method_option :dest_root, 
       :type => :string, 
-      :default => "s3n://runa-hbase-staging/", 
+      :default => "s3n://runa-staging-hbase-backups/", 
       :aliases => "-D", 
       :required => true,
       :desc  => "Destination root. S3 bucket, S3n path, HDFS or File"
@@ -155,7 +155,7 @@ module Hbacker
       :required => true, 
       :aliases => "-S", 
       :required => true,
-      :desc  => "Source scheme://path. Example: s3n://runa-hbase-staging/"
+      :desc  => "Source scheme://path. Example: s3n://runa-staging-hbase-backups/"
     method_option :pattern, 
       :type => :string, 
       :desc => "SQL Wildcard (%) for the table name within the Source scheme://path/session_name/ Exp: %summary%"
@@ -250,7 +250,7 @@ module Hbacker
     method_option :dest_root,
       :type => :string,
       :desc => "Limit exports to ones that saved in this locaiton",
-      :default => "s3n://runa-hbase-staging/",
+      :default => "s3n://runa-staging-hbase-backups/",
       :required => true
     def db
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN

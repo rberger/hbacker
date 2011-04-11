@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    hbacker (0.0.2)
+    hbacker (0.0.3)
       hbase-stargate
       right_aws (>= 2.0.0)
       stalker (= 0.8.0)
