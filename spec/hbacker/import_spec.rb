@@ -17,10 +17,12 @@ describe Hbacker::Import do
   
     @hbase_mock = mock('@hbase_mock')
     @hbase_mock.stub(:table_descriptor).with(@table_name)
+    @hbase_mock.stub(:create_table).and_return(true)
     @db_mock = mock('@db_mock')
-    @db_mock.stub(:table_info)
+    @db_mock.stub(:imported_table_info)
     @db_mock.stub(:start_info)
-    @db_mock.stub(:table_names).and_return(%w(foo bar))
+    @db_mock.stub(:end_info)
+    @db_mock.stub(:table_names).and_return([@table_name, 'bar'])
     Hbacker::Db.stub(:new).and_return(@db_mock)
     @s3_mock = mock('@s3_mock')
     @s3_mock.stub(:save_info)
@@ -30,6 +32,7 @@ describe Hbacker::Import do
     @hbase_vsn = "0.20.3"
     @reiteration_time = 15
     @mapred_max_jobs = 10
+    @restore_empty_tables = false
   end
 
   describe Hbacker::Import, "specified_tables" do
@@ -42,12 +45,10 @@ describe Hbacker::Import do
       opts = {
         :session_name => @session_name,
         :source_root => @source_root,
-        :start_time => @start_time,
-        :end_time => @end_time,
         :tables => [@table_name],
         :workers_watermark => 10,
         :workers_timeout => timeout,
-        :versions => @versions,
+        :import_session_name => @import_session_name,
         :timeout => timeout,
         :reiteration_time => @reiteration_time,
         :mapred_max_jobs => @mapred_max_jobs
@@ -55,8 +56,8 @@ describe Hbacker::Import do
       db_export = Hbacker::Db.new
       db_import = Hbacker::Db.new
       import = Hbacker::Import.new(@hbase_mock, db_export, db_import, @hbase_hm, @hbase_vsn, @hadoop_hm, @s3_mock)
-      import.should_receive(:queue_table_import_job).with(@table_name, @start_time, @end_time, 
-        @source, @versions, @session_name, timeout, @reiteration_time, @mapred_max_jobs)
+      import.should_receive(:queue_table_import_job).with(@table_name, @source, 
+        @session_name, @import_session_name, timeout, @reiteration_time, @mapred_max_jobs, @restore_empty_table)
       import.specified_tables(opts)
     end
   end

@@ -17,7 +17,9 @@ module Hbacker
     end
 
     class HbaseError < RuntimeError ; end
-    class 
+    class TableExistsError < HbaseError; end
+    class TableFailCreateError < HbaseError; end
+    
     ##
     # Get the Stargate::Model::TableDescriptor of the specified table from HBase
     def table_descriptor(table_name)
@@ -56,24 +58,18 @@ module Hbacker
     # @option status [String] :wtf Should never get this exception
     #
     def create_table(name, schema)
-      status = {:wtf => "Should  never be passed back"}
       result = nil
 
       begin
         result = @stargate.create_table(name, schema)
       rescue Stargate::TableExistsError => e
-        Hbacker.log.warn "Hbacker::Hbase#create_table: Table #{name} already exists. Continuing"
-        raise HbaseError, "Table Already Exists"
-        status = {:exists =>  @stargate.show_table(name)}
-        return status
+        raise Hbase::TableFailCreateError, "Table #{@stargate.show_table(name)} Already Exists"
       rescue Stargate::TableFailCreateError => e
-        status ={:hbase_table_create_error => e}
-        return status
+        raise Hbase::TableFailCreateError, e.message
       rescue Exception => e
-        status = {:generic_exception => e}
-        return status
+        raise Hbase::HbaseError, e.message, caller
       end
-      return {:created => result}
+      return result
     end
 
     def jobs_in_hadop_queue

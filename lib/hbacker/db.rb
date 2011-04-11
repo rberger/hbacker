@@ -47,15 +47,18 @@ module Hbacker
     
     class DbError < RuntimeError ; end
     
-    # Records HBase Table Info into SimpleDB table
+    # Records Exported HBase Table Info into SimpleDB table
     # @param [String] table_name Name of the HBase Table
     # @param [Integer] start_time Earliest Time to export from (milliseconds since Unix Epoch)
     # @param [Integer] end_time Latest Time to export to (milliseconds since Unix Epoch)
     # @param [Stargate::Model::TableDescriptor] table_descriptor Schema of the HBase Table
     # @param [Integer] versions Max number of row/cell versions to export
     # @param [String] session_name Name (usually the date_time_stamp) of the export session
+    # @param [Boolean] empty True if the table is totally empty
+    # @param [Boolean] error True if there was a hard error while doing the operation
+    # @param [String] error_info Basic info about the error if error is true
     #
-    def table_info(table_name, start_time, end_time, table_descriptor, versions, session_name, empty, error=false)
+    def exported_table_info(table_name, start_time, end_time, table_descriptor, versions, session_name, empty=false, error={})
       now = Time.now.utc
       table_info = {
         :table_name => table_name,
@@ -63,36 +66,58 @@ module Hbacker
         :end_time => end_time,
         :session_name => session_name,
         :empty => empty,
-        :error => error,
+        :error => error.empty? ? false : true,
+        :error_info => error.empty? ? nil : error[:info],
         :specified_versions => versions,
         :updated_at => now
       }
-      case @mode
-      when :export
-        klass = ExportSession
-      when :import
-        klass = ImportSession
-      end
+      ExportSession.create(table_info)
       
-      klass.create(table_info)
-
-      table_descriptor.column_families_to_hashes.each do |column|
-        column.merge!(
-        {
-          :table_name => table_name, 
-          :session_name => session_name,
-          :updated_at => now
-        }
-        )
-
-        case @mode
-        when :export
-          klass = ExportedColumnDescriptor
-        when :import
-          klass = ImportedColumnDescriptor
+      if table_descriptor
+        table_descriptor.column_families_to_hashes.each do |column|
+          column.merge!(
+          {
+            :table_name => table_name, 
+            :session_name => session_name,
+            :updated_at => now
+          }
+          )
+          ExportedColumnDescriptor.create(column)
         end
-
-        klass.create(column)
+      end
+    end
+  
+    # Records Imported HBase Table Info into SimpleDB table
+    # @param [String] table_name Name of the HBase Table
+    # @param [String] session_name Name (usually the date_time_stamp) of the export session
+    # @param [Boolean] empty True if the table is totally empty
+    # @param [Boolean] error True if there was a hard error while doing the operation
+    # @param [String] error_info Basic info about the error if error is true
+    #
+    def imported_table_info(table_name, session_name, empty=false, error={})
+      now = Time.now.utc
+      table_info = {
+        :table_name => table_name,
+        :session_name => session_name,
+        :empty => empty,
+        :error => error.empty? ? false : true,
+        :error_info => error.empty? ? nil : error[:info],
+        :updated_at => now
+      }
+      
+      ImportSession.create(table_info)
+      
+      if table_descriptor
+        table_descriptor.column_families_to_hashes.each do |column|
+          column.merge!(
+          {
+            :table_name => table_name, 
+            :session_name => session_name,
+            :updated_at => now
+          }
+          )
+          ImportedColumnDescriptor.create(column)
+        end
       end
     end
   
@@ -129,7 +154,7 @@ module Hbacker
     # @param [Time] ended_at When the export ended
     # @param [String] dest_root The scheme and root path of where the export is put
     #
-    def end_info(session_name, dest_root, ended_at, error=nil, error_info=nil)
+    def end_info(session_name, dest_root, ended_at, error={})
       now = Time.now.utc
       case @mode
       when :export
@@ -140,8 +165,8 @@ module Hbacker
       
       info = klass.find_by_name_and_dest_root(session_name, dest_root)
       info.reload
-      info[:error] = error if error
-      info[:error_info] = error_info if error_info
+      info[:error] = error.empty? ? false : true
+      info[:error_info] = error.empty? ? nil : error[:info]
       info[:ended_at] = ended_at
       info[:updated_at] = now
       info.save
@@ -289,6 +314,7 @@ module Hbacker
           specified_versions :Integer
           empty :Boolean
           error :Boolean
+          error_info :String
           created_at :DateTime, :default => lambda{ Time.now.utc }
           updated_at :DateTime
         end
@@ -354,11 +380,9 @@ module Hbacker
         columns do
           table_name
           session_name
-          start_time  :Integer
-          end_time  :Integer
-          specified_versions :Integer
           empty :Boolean
           error :Boolean
+          error_info :String
           created_at :DateTime, :default => lambda{ Time.now.utc }
           updated_at :DateTime
         end

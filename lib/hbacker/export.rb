@@ -18,6 +18,7 @@ module Hbacker
     end
 
     class ExportError < RuntimeError ; end
+    class QueueTimeoutError < ExportError ; end
 
     ##
     # Querys HBase to get a list of all the tables in the cluser
@@ -51,8 +52,8 @@ module Hbacker
     # @option opts [String] :mapred_max_jobs
     #
     def specified_tables(opts)
-      # begin
-        Hbacker.log.debug "Export#specified_tables"
+      Hbacker.log.debug "Export#specified_tables"
+      begin
         opts = Hbacker.transform_keys_to_symbols(opts)
 
         @db.start_info(opts[:session_name], opts[:dest_root], opts[:start_time], opts[:end_time], Time.now.utc)
@@ -65,7 +66,7 @@ module Hbacker
             msg = "Hbacker::Export#specified_tables: Timeout (#{opts[:workers_timeout]}) " +
               " waiting for workers in queue < opts[:workers_timeout]"
             Hbacker.log.error msg
-            raise ExportError, msg
+            next
           end
         
           Hbacker.log.debug "Calling queue_table_export_job(#{table_name}, #{opts[:start_time]}, "+
@@ -73,10 +74,12 @@ module Hbacker
           self.queue_table_export_job(table_name, opts[:start_time], opts[:end_time], dest, opts[:versions], 
             opts[:session_name], opts[:timeout], opts[:reiteration_time], opts[:mapred_max_jobs])
         end
-      # rescue Exception => exception
-      #   Hbacker.log.error "Hbacker::Export#specified_tables: EXCEPTION: #{exception}"
-      #   Hbacker.log.error caller.join("\n")
-      # end
+      rescue Exception => e
+        Hbacker.log.error "Hbacker::Export#specified_tables: EXCEPTION: #{e.inspect}"
+        Hbacker.log.error caller.join("\n")
+        @db.end_info(opts[:session_name], opts[:dest_root], Time.now.utc, {:info => "#{e.class}: #{e.message}"})
+      end
+      @db.end_info(opts[:session_name], opts[:dest_root], Time.now.utc)
     end
     
     ##
@@ -132,15 +135,16 @@ module Hbacker
       if $?.exitstatus > 0
         Hbacker.log.error"Hadoop command failed:"
         Hbacker.log.error cmd_output
-        @db.table_info(table_name, start_time, end_time, table_descriptor, versions, session_name, false, true)
+        @db.exported_table_info(table_name, start_time, end_time, table_descriptor, versions, session_name, 
+          false, {:info => "Hadoop Cmd Failed"})
         Hbacker.log.debug "About to save_info to s3: #{destination}hbacker_hadoop_error.log"
-        @s3.save_info("#{destination}hbacker_hadoop_error.log", cmd_output)
+        @s3.save_info("#{destination}hbacker_hadoop_export_error.log", cmd_output)
         raise ExportError, "Error running Haddop Command", caller
       end
       
-      @db.table_info(table_name, start_time, end_time, table_descriptor, versions, session_name, false, false)
+      @db.exported_table_info(table_name, start_time, end_time, table_descriptor, versions, session_name)
       Hbacker.log.debug "About to save_info to s3: #{destination}hbacker_hadoop.log"
-      @s3.save_info("#{destination}hbacker_hadoop.log", cmd_output)
+      @s3.save_info("#{destination}hbacker_hadoop_export.log", cmd_output)
     end
   end
 end

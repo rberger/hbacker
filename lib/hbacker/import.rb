@@ -16,6 +16,8 @@ module Hbacker
     end
 
     class ImportError < RuntimeError ; end
+    class QueueTimeoutError < ImportError ; end
+    class TableCreateError < ImportError ; end
 
     ##
     # Master process to manage an Import session. Pulls data from :source_root Filesystem to specified HBase Cluster
@@ -26,26 +28,44 @@ module Hbacker
     # 
     def specified_tables(opts)
       Hbacker.log.debug "Import#specified_tables"
-      opts = Hbacker.transform_keys_to_symbols(opts)
+      begin
+        opts = Hbacker.transform_keys_to_symbols(opts)
       
-      exported_table_names = @export_db.table_names(:export, opts[:session_name], opts[:source_root])
-      if opts[:tables]
-      # Only import the tables specified in opts[:tables]
-        exported_table_names = exported_table_names & opts[:tables]
-        if exported_table_names.length < opts[:tables].length
-          raise Thor::InvocationError, "One or more of the tables requested does not exist in this backup"
+        @import_db.start_info(opts[:session_name], opts[:dest_root], opts[:start_time], opts[:end_time], Time.now.utc)
+
+        exported_table_names = @export_db.table_names(:export, opts[:session_name], opts[:source_root])
+        if opts[:tables]
+        # Only import the tables specified in opts[:tables]
+          exported_table_names = exported_table_names & opts[:tables]
+          if exported_table_names.length < opts[:tables].length
+            raise Thor::InvocationError, "One or more of the tables requested does not exist in this backup"
+          end
         end
-      end
-      exported_table_names.each do |table|
-        source = "#{opts[:source_root]}#{opts[:session_name]}/#{table}/"
-        Hbacker.log.debug "Calling queue_table_import_job(#{table_name}, #{source}, " + 
-          "#{opts[:session_name]}, #{opts[:import_session_name]}, #{opts[:timeout]}, " +
-          "#{opts[:reiteration_time]}, #{opts[:mapred_max_jobs]}, #{opts[:restore_empty_tables]})"
+        exported_table_names.each do |table|
+          source = "#{opts[:source_root]}#{opts[:session_name]}/#{table}/"
+        
+          wait_results = Hbacker.wait_for_hbacker_queue('queue_table_import', opts[:workers_watermark], opts[:workers_timeout])
+          unless wait_results[:ok]
+            msg = "Hbacker::Import#specified_tables: Timeout (#{opts[:workers_timeout]}) " +
+              " waiting for workers in queue < opts[:workers_timeout]"
+            Hbacker.log.error msg
+            next
+          end
+      
+          Hbacker.log.debug "Calling queue_table_import_job(#{table}, #{source}, " + 
+            "#{opts[:session_name]}, #{opts[:import_session_name]}, #{opts[:timeout]}, " +
+            "#{opts[:reiteration_time]}, #{opts[:mapred_max_jobs]}, #{opts[:restore_empty_tables]})"
           
-        self.queue_table_import_job(table_name, source, opts[:session_name], 
-          opts[:import_session_name], opts[:timeout], opts[:reiteration_time], 
-          opts[:mapred_max_jobs], opts[:restore_empty_tables])
+          self.queue_table_import_job(table, source, opts[:session_name], 
+            opts[:import_session_name], opts[:timeout], opts[:reiteration_time], 
+            opts[:mapred_max_jobs], opts[:restore_empty_tables])
+        end
+      rescue Exception => e
+        Hbacker.log.error "Hbacker::Import#specified_tables: EXCEPTION: #{e.inspect}"
+        Hbacker.log.error caller.join("\n")
+        @import_db.end_info(opts[:session_name], opts[:dest_root], Time.now.utc, {:info => "#{e.class}: #{e.message}"})
       end
+      @import_db.end_info(opts[:session_name], opts[:dest_root], Time.now.utc)
     end
     
     # Queue a ruby job to manage the Hbase/Hadoop Import job
@@ -83,7 +103,13 @@ module Hbacker
     #
     def table(table_name, source, import_session_name, table_description, restore_empty_tables=false)
       
-      table_status = @hbase.create_table(table_name, table_description)
+      begin
+        table_status = @hbase.create_table(table_name, table_description)
+      rescue Hbase::TableFailCreateError
+        Hbacker.log.warn "Hbacker::Import#table: Table #{name} already exists. Continuing"
+      end
+      
+      raise TableCreateError, "Improper result from @hbase.create_table(#{table_name}, table_description)" unless table_status
       
       cmd = "#{@hadoop_home}/bin/hadoop jar #{@hbase_home}/hbase-#{@hbase_version}.jar import " +
         "#{table_name} #{source}"
@@ -94,10 +120,10 @@ module Hbacker
       if $?.exitstatus > 0
         Hbacker.log.error"Hadoop command failed: #{cmd}"
         Hbacker.log.error cmd_output
-        @s3.save_info("#{source}hbacker_hadoop_import_error_#{import_session_name}.log", cmd_output)
+        @s3.save_info("#{source}hbacker_hadoop_import_error_import_#{import_session_name}.log", cmd_output)
         raise ImportError, "Error running Haddop Command", caller
       end
-      @s3.save_info("#{source}hbacker_hadoop_error.log", cmd_output)
+      @s3.save_info("#{source}hbacker_hadoop_import.log", cmd_output)
     end
   end
 end

@@ -9,6 +9,25 @@ module Worker
   
   class WorkerError < RuntimeError ; end
 
+  # Looks like Stalker allows for only a single error block for all jobs
+  Stalker.error do |e, name, args, job, style_opts|
+    Hbacker.log.error "WORKER ERROR: job: #{name} e: #{e.inspect}"
+    
+    if (e.class == RightAws::AwsError) && (e.include?(/ServiceUnavailable/))
+      Hbacker.log.warn "ServiceUnavailable. Releasing job back on queue"
+      job.release(job.pri, 10, job.ttr)
+      break
+    end
+
+    if name =~ /import/
+      @import_db_wrk.imported_table_info(args[:table_name], args[:session_name], false, {:info => "#{e.class}: #{e.message}"})
+    elsif name =~ /export/
+      @db_wrk.exported_table_info(args[:table_name], args[:start_time], args[:end_time], nil,  
+        args[:versions], args[:session_name], false, {:info => "#{e.class}: #{e.message}"})
+    end
+    job.bury
+  end
+
   ##
   # Stalker Job to do the work of starting a Hadoop Job to export an HBase Table
   # @param [Hash] args
@@ -31,20 +50,7 @@ module Worker
     a = Hbacker.transform_keys_to_symbols(args)
     Hbacker.log.level = a[:log_level] ? a[:log_level] : Logger::DEBUG
 
-    Stalker.error do |e, name, args, job, style_opts|
-      stmt = "WORKER ERROR: job: #{name} e: #{e.inspect} args: #{args.inspect}"
-      Hbacker.log.error stmt
-      
-      if e.include?(/ServiceUnavailable/)
-        Hbacker.log.warn "ServiceUnavailable. Releasing job back on queue"
-        job.release(job.pri, 10, job.ttr)
-        break
-      end
-      stmt = "----------- After test for ServiceUnavailable"
-      Hbacker.log.error stmt
-    end
-
-    # Hack to get around issues testing this module
+    # Hack to get around issues testing this module. Only called during testing
     @db_wrk = @hbase_wrk = @s3_wrk = @export_wrk = nil if a[:reset_instance_vars]
     
     @db_wrk ||= Hbacker::Db.new(a[:aws_access_key_id], a[:aws_secret_access_key], a[:export_hbase_name], a[:reiteration_time])
@@ -64,7 +70,7 @@ module Worker
     else
       table_descriptor = @hbase_wrk.table_descriptor(a[:table_name])
       Hbacker.log.warn "Worker#queue_table_export: Table: #{a[:table_name]} is empty. Recording in Db but not backing up"
-      @db_wrk.table_info(a[:table_name], a[:start_time], a[:end_time], table_descriptor,  a[:versions], a[:session_name], true, false)
+      @db_wrk.exported_table_info(a[:table_name], a[:start_time], a[:end_time], table_descriptor,  a[:versions], a[:session_name], true)
     end
   end
   
@@ -89,20 +95,7 @@ module Worker
     a = Hbacker.transform_keys_to_symbols(args)
     Hbacker.log.level = a[:log_level] ? a[:log_level] : Logger::DEBUG
 
-    Stalker.error do |e, name, args, job, style_opts|
-      stmt = "WORKER ERROR: job: #{name} e: #{e.inspect} args: #{args.inspect}"
-      Hbacker.log.error stmt
-      
-      if e.include?(/ServiceUnavailable/)
-        Hbacker.log.warn "ServiceUnavailable. Releasing job back on queue"
-        job.release(job.pri, 10, job.ttr)
-        break
-      end
-      stmt = "----------- After test for ServiceUnavailable"
-      Hbacker.log.error stmt
-    end
-
-    # Hack to get around issues testing this module
+    # Hack to get around issues testing this module. Only called during testing
     @export_db_wrk = @import_db_wrk = @hbase_wrk = @s3_wrk = @import_wrk = nil if a[:reset_instance_vars]
     
     @export_db_wrk ||= Hbacker::Db.new(:export, a[:aws_access_key_id], a[:aws_secret_access_key], 
