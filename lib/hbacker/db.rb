@@ -162,7 +162,15 @@ module Hbacker
         klass = ImportSession
       end
       
-      info = klass.find_by_cluster_name_and_session_name_and_dest_root(@hbase_name, session_name, dest_root)
+      # Loop prevents a race condition of the start_info call update not being complete before the end_info call
+      count = 0
+      info = nil
+      while (info = klass.find_by_cluster_name_and_session_name_and_dest_root(@hbase_name, session_name, dest_root)).nil? && count < 10
+        sleep 3
+        count += 1
+      end
+      raise DbError, "#{klass.class}.find_by_cluster_name_and_session_name_and_dest_root(#{@hbase_name}, #{session_name}, #{dest_root}) is nil" if info.nil?
+      
       info.reload
       info.save_attributes(
       :error => error.empty? ? false : true,
