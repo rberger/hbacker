@@ -2,9 +2,11 @@ h1. HBacker
 
 Ruby Tool to Export / Import HBase to S3, HDFS or local file system.
 
-*THIS IS UNDER CONSTRUCTION*
+*THIS HAS BARELY BEEN TESTED*
 
-See doc/Proposed_HBase_Export_using_HBASE-1684.txt for the plan
+It seeems to work. Still testing it. Haven't excised the incremental export / import.
+
+*NOTE:* The incremental export/import will *not* handle deletes to HBase. There is no way to know that there was a delete. Our use case does not have deletes. We never delete rows, so its fine for that.
 
 h2. Dependencies
 
@@ -130,8 +132,9 @@ h2. Todos and other notes for the future
 * Have an easy way to continue a backup that was aborted with minimal redundant copying on recovery.
 * Easy way to say do an incremental export based on the last export (right now have to manually figure out the parameters for the next increment)
 * Replace/Update the standard HBase export/import module to get some metrics out
-  * Number of rows exported/imported
-  * Some kind of hash or other mechanism to use for data integrity checking
+  	* Number of rows exported/imported
+  	* Some kind of hash or other mechanism to use for data integrity checking
+* Propose a mechanism to be added to HBase to robustly log deletes. That could be used with backup schemes like this to use a delete log to allow for restores of tables that have had deleted rows.
 
 h2. Copyright
 
