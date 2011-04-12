@@ -4,7 +4,7 @@ Ruby Tool to Export / Import HBase to S3, HDFS or local file system.
 
 *THIS HAS BARELY BEEN TESTED*
 
-It seeems to work. Still testing it. Haven't excised the incremental export / import.
+It seeems to work. Still testing it. Haven't exercised the incremental export / import.
 
 *NOTE:* The incremental export/import will *not* handle deletes to HBase. There is no way to know that there was a delete. Our use case does not have deletes. We never delete rows, so its fine for that.
 
