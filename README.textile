@@ -85,6 +85,8 @@ h3. Have beanstalkd running
 
 <code>beanstalkd -d</code> will run beanstalk in daemon mode on port 11300
 
+A nice tool to monitor what's going on with your beanstalkd is <code>https://github.com/dustin/beanstalk-tools</code>
+
 h3. Start the workers
 
 
@@ -99,6 +101,26 @@ Right now the easiest way to start the workers is something like this on the mac
 
 This will run 16 workers:
 <code>for i in {1..16}; do hbacker_worker  > worker_$i.log 2>&1 &  done</code>
+
+h3. Start the main process
+
+Best to run this as the user who has hadoop access to run the hadoop map reduce jobs. 
+
+hbacker help will tell you the commands available
+
+hbacker help export will tell you the options for the export (backup) command
+
+Sample export command:
+
+hbacker export -D s3n://runa-staging-hbase-backups/ --mapred-max-jobs=8 -a -d &> main.log &
+
+h2. Todos and other notes for the future
+
+* Have an easy way to continue a backup that was aborted with minimal redundant copying on recovery.
+* Easy way to say do an incremental export based on the last export (right now have to manually figure out the parameters for the next increment)
+* Replace/Update the standard HBase export/import module to get some metrics out
+  * Number of rows exported/imported
+  * Some kind of hash or other mechanism to use for data integrity checking
 
 h2. Copyright
 
