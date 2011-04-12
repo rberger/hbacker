@@ -8,6 +8,8 @@ It seeems to work. Still testing it. Haven't excised the incremental export / im
 
 *NOTE:* The incremental export/import will *not* handle deletes to HBase. There is no way to know that there was a delete. Our use case does not have deletes. We never delete rows, so its fine for that.
 
+Please feel free to fork, but please do send pull requests or generate issue reports if you find problems.
+
 h2. Dependencies
 
 * hbase 0.20.3 - hbase 0.90.x
@@ -139,3 +141,4 @@ h2. Todos and other notes for the future
 h2. Copyright
 
 Copyright (c) 2011 Robert J. Berger and Runa, Inc.
+
