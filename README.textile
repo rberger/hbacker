@@ -79,6 +79,16 @@ Assuming you will be using S3 for storing the backups, you'll need to give hadoo
 
 You can use AWS IAM to create a user and policy to just allow Hadoop to access specific buckets and so on. That's a tutorial all on its own.
 
+h2. Configure AWS credentials for Hbacker to access  AWS SimpleDB
+
+You will also need to create a yaml file with suitable AWS credentials to access SimpleDB. By default Hbacker will look for the file in <code>~/.aws/aws.config</code>. The format of that file is:
+
+<pre><code>
+	access_key_id: YourAwsAccessKeyId
+	secret_access_key: YourAwsSecretAccessKey
+</code></pre>
+They don't have to be the same keys as Hadoop HDFS uses.
+
 h2. Starting things
 
 h3. Have beanstalkd running
@@ -111,8 +121,9 @@ hbacker help will tell you the commands available
 hbacker help export will tell you the options for the export (backup) command
 
 Sample export command:
-
-hbacker export -D s3n://runa-staging-hbase-backups/ --mapred-max-jobs=8 -a -d &> main.log &
+This will export all tables from the cluster whose master is hbase-master.example.com to S3 bucket example-hbase-backups. It will create a "sub-directory" in the bucket whose name will be the timestamp based somewhat on "Time.now.utc" and then put a "sub-directory" per Hbase table under example-hbase-backups/<timestamp>/
+	
+<code>hbacker export -H hbase-master.example.com -D s3n://example-hbase-backups/ --mapred-max-jobs=18 -a &> main.log &</code>
 
 h2. Todos and other notes for the future
 
