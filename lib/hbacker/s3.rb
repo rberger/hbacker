@@ -15,7 +15,8 @@
 module Hbacker
   require "right_aws"
   require "hbacker"
-  
+  require 'fileutils'
+
   class S3
     attr_reader :s3
     # Initialize connection to S3
@@ -46,11 +47,34 @@ module Hbacker
       list.flatten
     end
     
+    def save_info_to_file(bucket, key)
+      full_path = "#{bucket}/#{key}"
+      dir_path = File.dirname full_path
+      Hbacker.log.debug "S3#save_info_to_file: dir_path: #{dir_path} full_path: #{full_path}"
+      FileUtils.mkdir_p dir_path
+      File.open(full_path, "w") do |f|
+        f.write data
+      end
+    end
+    
     def save_info(full_path, data)
-      m = %r[.*://(.+?)/(.*)].match(full_path)
-      bucket = m[1]
-      key = m[2]
-      result = @s3.put(bucket, key, data)
+      m = %r[(.*)://(.+?)/(.*)].match(full_path)
+      protocol = m[1]
+      bucket = m[2]
+      key = m[3]
+      if %w(s3 s3n).detect {|p| p == protocol }
+        result = @s3.put(bucket, key, data)
+      elsif protocol == "file"
+        save_info_to_file(bucket, key)
+      elsif protocol == "hdfs"
+        dir_base = "HDFS_CMD_LOGS/#{bucket}"
+        Hbacker.log.warn "Map/Reduce Job Logs will be stored in #{dir_base}/#{key}"
+        save_info_to_file(dir_base, key)
+      else
+        msg = "Invalid protocol: #{protocol} for saving Map/Reduce Logs for #{full_path}"
+        Hbacker.log.error msg
+        raise msg
+      end
     end
   end
 end

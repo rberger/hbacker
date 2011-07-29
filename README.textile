@@ -41,6 +41,7 @@ From the hbase_stargate docs:
 h3. beanstalkd
 
 h4. If you are lucky (Unbuntu 10 onward)
+
 <code>apt-get install beanstalkd</code>
 
 h4. From source (only tested on Ubuntu 9.10)
@@ -100,9 +101,12 @@ h3. Have beanstalkd running
 <code>beanstalkd -d</code> will run beanstalk in daemon mode on port 11300
 
 A nice tool to monitor what's going on with your beanstalkd is <code>https://github.com/dustin/beanstalk-tools</code>
+Assuming you are within the directory of beanstalk-tools you can execute:
+<code>./bin/beanstalk-queue-stats.rb localhost:11300</code>
 
 h3. Start the workers
 
+*YOU MUST START SOME WORKERS BEFORE RUNNING HBACKER*
 
 A worker job is based on a single HBase Table. Normally it will record the start, status and table schema to SimpleDb and then run the Hadoop job to export or import the table. It waits around to handle errors and record the completion.
 
@@ -129,10 +133,16 @@ This will export all tables from the cluster whose master is hbase-master.exampl
 	
 <code>hbacker export -H hbase-master.example.com -D s3n://example-hbase-backups/ --mapred-max-jobs=18 -a &> main.log &</code>
 
+h2. Issues and Cavets
+
+* Export / Import to/from HDFS should work, but is untested.
+* When doing Export / Import to/from HDFS, the command history is stored in a directory within the current directory where the hbacker program is run for now. Eventually it will be stored in HDFS as well.
+
 h2. Todos and other notes for the future
 
 * Have an easy way to continue a backup that was aborted with minimal redundant copying on recovery.
 * Easy way to say do an incremental export based on the last export (right now have to manually figure out the parameters for the next increment)
+* Make sure Export/Import to/from HDFS work and the command logs are stored there too.
 * Replace/Update the standard HBase export/import module to get some metrics out
   	* Number of rows exported/imported
   	* Some kind of hash or other mechanism to use for data integrity checking
