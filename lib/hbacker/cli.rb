@@ -66,7 +66,7 @@ module Hbacker
       :default => "s3n://runa-staging-hbase-backups/", 
       :aliases => "-D", 
       :required => true,
-      :desc  => "Destination root. S3 bucket, S3n path, HDFS or File"
+      :desc  => "Must have a protocol prefix and must end with a slash. Destination root. S3 bucket, S3n path, HDFS or File"
     method_option :versions, 
       :type => :numeric,
       :default => 100000,
@@ -169,7 +169,7 @@ module Hbacker
       :required => true, 
       :aliases => "-S", 
       :required => true,
-      :desc  => "Source scheme://path. Example: s3n://runa-staging-hbase-backups/"
+      :desc  => "Must start with protocol and end with slash (/). Source scheme://path. Example: s3n://runa-staging-hbase-backups/"
     method_option :pattern, 
       :type => :string, 
       :desc => "SQL Wildcard (%) for the table name within the Source scheme://path/session_name/ Exp: %summary%"
@@ -241,7 +241,7 @@ module Hbacker
       raise Thor::MalformattedArgumentError, "Can not set bot --tables and --pattern" if options[:tables] && options[:pattern]
  
       config = setup(:import, options)
-      imp = config[:export]
+      imp = config[:import]
       imp.specified_tables options
     end
 
@@ -263,7 +263,7 @@ module Hbacker
       :desc => "String to select the export session. Exp: 20110327_%"
     method_option :dest_root,
       :type => :string,
-      :desc => "Limit exports to ones that saved in this locaiton",
+      :desc => "Must start with a protocol prefix and end with a slash (/). Limit exports to ones that saved in this locaiton",
       :default => "s3n://runa-staging-hbase-backups/",
       :required => true
     def db
