@@ -45,13 +45,14 @@ module Hbacker
       begin
         opts = Hbacker.transform_keys_to_symbols(opts)
       
-        @import_db.start_info(opts[:session_name], opts[:dest_root], opts[:start_time], opts[:end_time], Time.now.utc)
+        @import_db.start_info(opts[:session_name], opts[:source_root], opts[:start_time], opts[:end_time], Time.now.utc)
 
         exported_table_names = @export_db.table_names(:export, opts[:session_name], opts[:source_root])
         if opts[:tables]
         # Only import the tables specified in opts[:tables]
           exported_table_names = exported_table_names & opts[:tables]
           if exported_table_names.length < opts[:tables].length
+            Hbacker.log.debug "opts[:tables]: #{opts[:tables].inspect} exported_table_names: #{exported_table_names}"
             raise Thor::InvocationError, "One or more of the tables requested does not exist in this backup"
           end
         end
@@ -77,10 +78,10 @@ module Hbacker
       rescue Exception => e
         Hbacker.log.error "Hbacker::Import#specified_tables: EXCEPTION: #{e.inspect}"
         Hbacker.log.error caller.join("\n")
-        @import_db.end_info(opts[:session_name], opts[:dest_root], Time.now.utc, {:info => "#{e.class}: #{e.message}"})
+        @import_db.end_info(opts[:session_name], opts[:source_root], Time.now.utc, {:info => "#{e.class}: #{e.message}"})
         raise ImportError, "#{e.class}: #{e.message}"
       end
-      @import_db.end_info(opts[:session_name], opts[:dest_root], Time.now.utc)
+      @import_db.end_info(opts[:session_name], opts[:source_root], Time.now.utc)
     end
     
     # Queue a ruby job to manage the Hbase/Hadoop Import job

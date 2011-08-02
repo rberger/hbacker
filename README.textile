@@ -151,24 +151,35 @@ or
 
 h3. Running export to a local filesystem
 
-<code>bundle exec bin/hbacker export --hadoop_home=/absolute/path/to/hadoop --hbase_home=/absolute/path/to/hbase -H localhost -D file:///tmp/dump -t <table-name></code>
+<code>bundle exec bin/hbacker export --hadoop_home=/absolute/path/to/hadoop --hbase_home=/absolute/path/to/hbase \
+	-H localhost -D file:///tmp/dump/ -t <table-name></code>
 
 or
 
-<code>hbacker export --hadoop_home=/absolute/path/to/hadoop --hbase_home=/absolute/path/to/hbase -H localhost -D file:///tmp/dump -t <table-name></code>
+<code>hbacker export --hadoop_home=/absolute/path/to/hadoop --hbase_home=/absolute/path/to/hbase -H localhost \
+	-D file:///tmp/dump/ -t <table-name></code>
 
 Another example:
 
-<code>hbacker export --hadoop_home=/apps/hadoop --hbase_home=/apps/hbase -H localhost -D file:///home/rberger/work/dump -t furtive_staging_consumer_events_3413a157-4bec-4c9c-b080-626ce883202d --hbase_port 8090</code>
+<code>hbacker export --hadoop_home=/apps/hadoop --hbase_home=/apps/hbase -H localhost -D file:///home/rberger/work/dump/ \
+	-t furtive_staging_consumer_events_3413a157-4bec-4c9c-b080-626ce883202d --hbase_port 8090</code>
 
 h3. Running import from a local filesystem
 
-<code>bundle exec bin/hbacker import --session-name=<timestamp-dir> --source-root=file:///tmp/dump --import-hbase-host=localhost -H localhost --hadoop_home=/absolute/path/to/hadoop --hbase_home=/absolute/path/to/hbase -t <table-name></code>
+<code>bundle exec bin/hbacker import --session-name=<timestamp-dir> --source-root=file:///tmp/dump/ \
+	--import-hbase-host=localhost -H localhost --hadoop_home=/absolute/path/to/hadoop --hbase_home=/absolute/path/to/hbase \
+	-t <table-name></code>
 
 or
 
-<code>hbacker import --session-name=<timestamp-dir> --source-root=file:///tmp/dump --import-hbase-host=localhost -H localhost --hadoop_home=/absolute/path/to/hadoop --hbase_home=/absolute/path/to/hbase -t <table-name></code>
+<code>hbacker import --session-name=<timestamp-dir> --source-root=file:///tmp/dump/ --import-hbase-host=localhost \
+	-H localhost --hadoop_home=/absolute/path/to/hadoop --hbase_home=/absolute/path/to/hbase -t <table-name></code>
 
+or
+
+<code>hbacker import --session-name=20110802_060004  --hadoop_home=/apps/hadoop --hbase_home=/apps/hbase -H localhost \
+	-I localhost --source-root=file:///home/rberger/work/dump/ \
+	-t rob_test_furtive_staging_consumer_events_3413a157-4bec-4c9c-b080-626ce883202d --hbase_port 8090</code>
 
 h2. Todos and other notes for the future
 

@@ -169,6 +169,7 @@ module Hbacker
     #
     def end_info(session_name, dest_root, ended_at, error={})
       now = Time.now.utc
+      Hbacker.log.debug "end_info(@mode: #{@mode} @hbase_name: #{@hbase_name.inspect}session_name: #{session_name.inspect}, dest_root: #{dest_root.inspect}, ended_at: #{ended_at.inspect}, error: #{error.inspect}"
       case @mode
       when :export
         klass = ExportSession
@@ -185,7 +186,9 @@ module Hbacker
       end
       raise DbError, "#{klass.class}.find_by_cluster_name_and_session_name_and_dest_root(#{@hbase_name}, #{session_name}, #{dest_root}) is nil" if info.nil?
       
+      
       info.reload
+      Hbacker.log.debug "end_info(session_name: #{session_name.inspect}, dest_root: #{dest_root.inspect}, ended_at: #{ended_at.inspect}, error: #{error.inspect}"
       info.save_attributes(
       :error => error.empty? ? false : true,
       :error_info => error.empty? ? nil : error[:info],
@@ -271,11 +274,12 @@ module Hbacker
     end
 
     # Returns a list of info for exports for the specified session
+    # @param [Symbol] mode :export | :import
     # @param [String] session_name Name (usually the date_time_stamp) of the export session
     #   % can be used as a wildcard at begining and/or end
     # @return [Array<Hash>] List of export info that were backed up for specified session
     #
-    def session_info(session_name)
+    def session_info(mode, session_name)
       if session_name && session_name.include?("%")
         conditions = {:conditions  => ["session_name like ?", session_name]}
       elsif session_name
@@ -284,14 +288,18 @@ module Hbacker
         conditions = nil
       end
 
-      case @mode
+      case mode
       when :export
         klass = ExportSession
       when :import
         klass = ImportSession
       end
       
-      klass.select(:all, conditions).collect do |session_info|
+      Hbacker.log.debug "conditions: #{conditions.inspect}"
+      results = klass.select(:all, conditions)
+      Hbacker.log.debug "results: #{results.inspect}"
+      results.collect do |session_info|
+        Hbacker.log.debug "session_info: #{session_info.inspect}"
         session_info.reload
         session_info.attributes
       end

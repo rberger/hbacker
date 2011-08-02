@@ -47,7 +47,7 @@ module Hbacker
       list.flatten
     end
     
-    def save_info_to_file(bucket, key)
+    def save_info_to_file(bucket, key, data)
       full_path = "#{bucket}/#{key}"
       dir_path = File.dirname full_path
       Hbacker.log.debug "S3#save_info_to_file: dir_path: #{dir_path} full_path: #{full_path}"
@@ -65,11 +65,11 @@ module Hbacker
       if %w(s3 s3n).detect {|p| p == protocol }
         result = @s3.put(bucket, key, data)
       elsif protocol == "file"
-        save_info_to_file(bucket, key)
+        save_info_to_file(bucket, key, data)
       elsif protocol == "hdfs"
         dir_base = "HDFS_CMD_LOGS/#{bucket}"
         Hbacker.log.warn "Map/Reduce Job Logs will be stored in #{dir_base}/#{key}"
-        save_info_to_file(dir_base, key)
+        save_info_to_file(dir_base, key, data)
       else
         msg = "Invalid protocol: #{protocol} for saving Map/Reduce Logs for #{full_path}"
         Hbacker.log.error msg
