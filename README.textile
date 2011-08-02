@@ -138,6 +138,38 @@ h2. Issues and Cavets
 * Export / Import to/from HDFS should work, but is untested.
 * When doing Export / Import to/from HDFS, the command history is stored in a directory within the current directory where the hbacker program is run for now. Eventually it will be stored in HDFS as well.
 
+h2. Example Usage
+
+You only need the <code>bundle exec</code> if you are running this within the hbacker source directory. If its installed as a gem you would not prefix the command with <code>bundle exec bin/</code>
+h3. Startup 4 workers
+
+<code>for i in {1..4}; do bundle exec bin/hbacker_worker  > /tmp/dump/worker_${i}.log 2>&1 &  done</code>
+
+or
+
+<code>for i in {1..4}; do hbacker_worker  > /tmp/dump/worker_${i}.log 2>&1 &  done</code>
+
+h3. Running export to a local filesystem
+
+<code>bundle exec bin/hbacker export --hadoop_home=/absolute/path/to/hadoop --hbase_home=/absolute/path/to/hbase -H localhost -D file:///tmp/dump -t <table-name></code>
+
+or
+
+<code>hbacker export --hadoop_home=/absolute/path/to/hadoop --hbase_home=/absolute/path/to/hbase -H localhost -D file:///tmp/dump -t <table-name></code>
+
+Another example:
+
+<code>hbacker export --hadoop_home=/apps/hadoop --hbase_home=/apps/hbase -H localhost -D file:///home/rberger/work/dump -t furtive_staging_consumer_events_3413a157-4bec-4c9c-b080-626ce883202d --hbase_port 8090</code>
+
+h3. Running import from a local filesystem
+
+<code>bundle exec bin/hbacker import --session-name=<timestamp-dir> --source-root=file:///tmp/dump --import-hbase-host=localhost -H localhost --hadoop_home=/absolute/path/to/hadoop --hbase_home=/absolute/path/to/hbase -t <table-name></code>
+
+or
+
+<code>hbacker import --session-name=<timestamp-dir> --source-root=file:///tmp/dump --import-hbase-host=localhost -H localhost --hadoop_home=/absolute/path/to/hadoop --hbase_home=/absolute/path/to/hbase -t <table-name></code>
+
+
 h2. Todos and other notes for the future
 
 * Have an easy way to continue a backup that was aborted with minimal redundant copying on recovery.
