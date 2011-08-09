@@ -18,7 +18,8 @@ require 'thor'
 require 'hbacker/export'
 require 'hbacker/import'
 require 'hbacker/hbase'
-require 'hbacker/db'
+#require 'hbacker/db'
+require 'hbacker/mysql'
 
 module Hbacker
   class CLI < Thor
@@ -127,6 +128,22 @@ module Hbacker
       :type => :numeric,
       :default => 15,
       :desc => "How many times the RightAws should try to complete an operation. Each time it backs off its delay by 2x"
+    method_option :db_hostport,
+      :type    => :string,
+      :default => "localhost",
+      :desc    => "Database host[:port], e.g. \"localhost:3306\" or \"db.yoyodyne.com\""
+    method_option :db_username,
+      :type    => :string,
+      :default => "hbacker",
+      :desc    => "User name of the database"
+    method_option :db_password,
+      :type    => :string,
+      :default => "",
+      :desc    => "Password for the database"
+    method_option :db_database,
+      :type    => :string,
+      :default => "hbacker",
+      :desc    => "Database name"
     def export
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
       
@@ -135,8 +152,9 @@ module Hbacker
         help
         exit(-1)
       end
-      
+      puts ">>>>>> Before SETUP >>>>>>>"
       config = setup(:export, options)
+      puts "~~~~~~ After SETUP ~~~~~~~~"
       exp = config[:export]
       
       if options[:all]
@@ -236,6 +254,22 @@ module Hbacker
       :default => export_timestamp,
       :desc => "Timestamp for the import session"
       # :desc => "Enable the recreation of empty tables if the original source had empty tables"
+    method_option :db_hostport,
+      :type    => :string,
+      :default => "localhost",
+      :desc    => "Database host[:port], e.g. \"localhost:3306\" or \"db.yoyodyne.com\""
+    method_option :db_username,
+      :type    => :string,
+      :default => "hbacker",
+      :desc    => "User name of the database"
+    method_option :db_password,
+      :type    => :string,
+      :default => "",
+      :desc    => "Password for the database"
+    method_option :db_database,
+      :type    => :string,
+      :default => "hbacker",
+      :desc    => "Database name"
     def import
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
       raise Thor::MalformattedArgumentError, "Can not set bot --tables and --pattern" if options[:tables] && options[:pattern]
@@ -266,6 +300,22 @@ module Hbacker
       :desc => "Must start with a protocol prefix and end with a slash (/). Limit exports to ones that saved in this locaiton",
       :default => "s3n://runa-staging-hbase-backups/",
       :required => true
+    method_option :db_hostport,
+      :type    => :string,
+      :default => "localhost",
+      :desc    => "Database host[:port], e.g. \"localhost:3306\" or \"db.yoyodyne.com\""
+    method_option :db_username,
+      :type    => :string,
+      :default => "hbacker",
+      :desc    => "User name of the database"
+    method_option :db_password,
+      :type    => :string,
+      :default => "",
+      :desc    => "Password for the database"
+    method_option :db_database,
+      :type    => :string,
+      :default => "hbacker",
+      :desc    => "Database name"
     def db
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
       
@@ -313,15 +363,25 @@ module Hbacker
         raise Thor::InvocationError, "Invalid Setup: beanstalkd needs to be running" unless $?.exitstatus == 0
         begin
           config = YAML.load_file(File.expand_path(options[:aws_config]))
-        
+
+          db_config = {
+            :hostport => options[:db_hostport],
+            :username => options[:db_username],
+            :password => options[:db_password],
+            :database => options[:db_database]
+          }
+          
           if [:export, :export_db, :import].include?(task)
+            puts "...... Inside :export ......"
             export_hbase_name = options[:export_hbase_host].gsub(/[-\.]/, "_")
-            export_db = Hbacker::Db.new(:export, config['access_key_id'], config['secret_access_key'], export_hbase_name, options[:reiteration_time])
+            #export_db = Hbacker::Db.new(:export, config['access_key_id'], config['secret_access_key'], export_hbase_name, options[:reiteration_time])
+            export_db = Hbacker::Db.new(:export, db_config, export_hbase_name, options[:reiteration_time])
           end
         
           if [:import, :import_db].include?(task)
             import_hbase_name = options[:import_hbase_host].gsub(/[-\.]/, "_")
-            import_db = Hbacker::Db.new(:import, config['access_key_id'], config['secret_access_key'], import_hbase_name, options[:reiteration_time])
+            #import_db = Hbacker::Db.new(:import, config['access_key_id'], config['secret_access_key'], import_hbase_name, options[:reiteration_time])
+            import_db = Hbacker::Db.new(:import, db_config, import_hbase_name, options[:reiteration_time])
           end
         
           unless [:export_db, :export_db].include?(task)

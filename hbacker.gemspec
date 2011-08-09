@@ -27,4 +27,7 @@ Gem::Specification.new do |s|
   s.add_dependency "right_aws", ">= 2.0.0"
   s.add_dependency "uuidtools"
   s.add_dependency "stalker", ">= 0.8.0"
+  s.add_dependency "mysql"
+  s.add_dependency "activerecord",  ">= 3.0.9"
+  s.add_dependency "activesupport", ">= 3.0.9"
 end
