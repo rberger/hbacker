@@ -13,8 +13,8 @@
 #    limitations under the License.
 #    
 module Stalker
-  # def log(msg); end
-  # def log_error(msg); end
+  def log(msg); end
+  def log_error(msg); end
 end
 
 module Worker

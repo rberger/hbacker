@@ -38,7 +38,7 @@ GEM
     builder (2.1.2)
     bundle (0.0.1)
       bundler
-    childprocess (0.2.0)
+    childprocess (0.2.1)
       ffi (~> 1.0.6)
     cucumber (1.0.2)
       builder (>= 2.1.2)
