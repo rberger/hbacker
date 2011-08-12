@@ -375,7 +375,7 @@ module Hbacker
             puts "...... Inside :export ......"
             export_hbase_name = options[:export_hbase_host].gsub(/[-\.]/, "_")
             #export_db = Hbacker::Db.new(:export, config['access_key_id'], config['secret_access_key'], export_hbase_name, options[:reiteration_time])
-            export_db = Hbacker::Db.new(:export, db_config, export_hbase_name, options[:reiteration_time])
+            export_db = Hbacker::Db.new(:export, db_config, export_hbase_name, config['access_key_id'], config['secret_access_key'], options[:reiteration_time])
           end
         
           if [:import, :import_db].include?(task)

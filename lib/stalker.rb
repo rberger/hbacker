@@ -18,6 +18,7 @@
 # Allows the Stalker.job Proc to access the Beanstalk::Job instance at the runtime of the Stalker.job Proc
 # The Stalker.job Proc can then get stats or touch the Beanstalk::Job instance (i.e. reset its timeout counter)
 #
+require 'pp'
 module Stalker
   extend self
 
@@ -44,15 +45,15 @@ module Stalker
     delay = opts[:delay] || 0
     ttr   = opts[:ttr]   || 120
     beanstalk.use job
-    beanstalk.put [ job, args, beanstalk_style, style_opts ].to_json, pri, delay, ttr
-  rescue Beanstalk::NotConnected => e
-    failed_connection(e)
+    beanstalk.put(YAML.dump([ job, args, beanstalk_style, style_opts ]), pri, delay, ttr)
+  # rescue Beanstalk::NotConnected => e
+  #   failed_connection(e)
   end
 
   
   def work_one_job
     job = beanstalk.reserve
-    name, args, beanstalk_style, style_opts = JSON.parse job.body
+    name, args, beanstalk_style, style_opts = YAML.load(job.body)
     log_job_begin(name, args)
 
     handler = @@handlers[name]

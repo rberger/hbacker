@@ -97,9 +97,11 @@ module Hbacker
 
   ## -- Main code ---
   class Db
-    attr_reader :db_config, :hbase_name
-    def initialize(mode, db_config, hbase_name, reiteration_time=5)
+    attr_reader :db_config, :hbase_name, :aws_access_key_id, :aws_secret_access_key
+    def initialize(mode, db_config, hbase_name, aws_access_key_id, aws_secret_access_key, reiteration_time=5)
       @db_config = db_config
+      @aws_access_key_id = aws_access_key_id
+      @aws_secret_access_key = aws_secret_access_key
       @hbase_name = hbase_name
       @db_count ||= 0
       @db_count += 1
@@ -115,15 +117,17 @@ module Hbacker
       puts "========================"
       #Mysql.real_connect(hostport, username, password, database, 3306, "/tmp/mysql.sock")
       ActiveRecord::Base.establish_connection( :adapter=> "mysql",  
-                                               :host => hostport,  
+                                               :host => hostport,
+                                               :username => username,
+                                               :password => password,  
                                                :database=> database )
 
-      if @mode == :export
-        create_export_table_classes(@hbase_name)
-      else
-        create_import_table_classes(@hbase_name)
-      end
-      
+      # if @mode == :export
+      #   create_export_table_classes(@hbase_name)
+      # else
+      #   create_import_table_classes(@hbase_name)
+      # end
+      #       
     end
     
     class MysqlError < HbackerError ; end

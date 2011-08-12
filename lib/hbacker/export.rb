@@ -67,7 +67,7 @@ module Hbacker
     #
     def specified_tables(opts)
       Hbacker.log.debug "Export#specified_tables"
-      begin
+#      begin
         opts = Hbacker.transform_keys_to_symbols(opts)
 
         @db.start_info(opts[:session_name], opts[:dest_root], opts[:start_time], opts[:end_time], Time.now.utc)
@@ -85,29 +85,27 @@ module Hbacker
         
           Hbacker.log.debug "Calling queue_table_export_job(#{table_name}, #{opts[:start_time]}, "+
             "#{opts[:end_time]}, #{dest}, #{opts[:versions]}, #{opts[:session_name]})"
-          self.queue_table_export_job(table_name, opts[:start_time], opts[:end_time], dest, opts[:versions], 
-            opts[:session_name], opts[:timeout], opts[:reiteration_time], opts[:mapred_max_jobs])
+          self.queue_table_export_job(table_name, dest, opts)
         end
-      rescue Exception => e
-        Hbacker.log.error "Hbacker::Export#specified_tables: EXCEPTION: #{e.inspect}"
-        Hbacker.log.error caller.join("\n")
-        @db.end_info(opts[:session_name], opts[:dest_root], Time.now.utc, {:info => "#{e.class}: #{e.message}"})
-        raise ExportError, "#{e.class}: #{e.message}"
-      end
+      # rescue Exception => e
+      #   Hbacker.log.error "Hbacker::Export#specified_tables: EXCEPTION: #{e.inspect}"
+      #   Hbacker.log.error caller.join("\n")
+      #   @db.end_info(opts[:session_name], opts[:dest_root], Time.now.utc, {:info => "#{e.class}: #{e.message}"})
+      #   raise ExportError, "#{e.class}: #{e.message}"
+      # end
       @db.end_info(opts[:session_name], opts[:dest_root], Time.now.utc)
     end
     
     ##
     # Queue a ruby job to manage the Hbase/Hadoop Export job
-    def queue_table_export_job(table_name, start_time, end_time, destination, 
-      versions, session_name, timeout, reiteration_time, mapred_max_jobs)
+    def queue_table_export_job(table_name, destination, opts)
       args = {
         :table_name => table_name,
-        :start_time => start_time,
-        :end_time => end_time,
+        :start_time => opts[:start_time],
+        :end_time => opts[:end_time],
         :destination => destination,
-        :versions => versions,
-        :session_name => session_name,
+        :versions => opts[:versions],
+        :session_name => opts[:session_name],
         :stargate_url => @hbase.url,
         :aws_access_key_id => @db.aws_access_key_id,
         :aws_secret_access_key => @db.aws_secret_access_key,
@@ -118,12 +116,18 @@ module Hbacker
         :hbase_version => @hbase_version,
         :hadoop_home => @hadoop_home,
         :s3 => @s3,
-        :mapred_max_jobs => mapred_max_jobs,
+        :mapred_max_jobs => opts[:mapred_max_jobs],
         :log_level  => Hbacker.log.level,
-        :reiteration_time => reiteration_time
+        :reiteration_time => opts[:reiteration_time],
+        :db_config => {
+          :hostport => opts[:db_hostport],
+          :username => opts[:db_username],
+          :password => opts[:db_password],
+          :database => opts[:db_database]
+        }
       }
-      Hbacker.log.debug "------- Stalker.enqueue('queue_table_export', args, {:ttr => #{timeout}})"
-      Stalker.enqueue('queue_table_export', args, {:ttr => timeout}, true, :no_bury_for_error_handler => true)
+      Hbacker.log.debug "------- Stalker.enqueue('queue_table_export', args, {:ttr => #{opts[:timeout]}})"
+      Stalker.enqueue('queue_table_export', args, {:ttr =>  opts[:timeout]}, true, :no_bury_for_error_handler => true)
     end
     
     ##

@@ -66,8 +66,8 @@ module Worker
 
     # Hack to get around issues testing this module. Only called during testing
     @db_wrk = @hbase_wrk = @s3_wrk = @export_wrk = nil if a[:reset_instance_vars]
-    
-    @db_wrk ||= Hbacker::Db.new(:export, a[:aws_access_key_id], a[:aws_secret_access_key], a[:export_hbase_name], a[:reiteration_time])
+
+    @db_wrk ||= Hbacker::Db.new(:export, a[:db_config], a[:export_hbase_name], a[:aws_access_key_id], a[:aws_secret_access_key], a[:reiteration_time])
     
     @hbase_wrk ||= Hbacker::Hbase.new(a[:hbase_home], a[:hadoop_home], a[:hbase_host], a[:hbase_port])
     @s3_wrk ||= Hbacker::S3.new(a[:aws_access_key_id], a[:aws_secret_access_key])
@@ -112,10 +112,12 @@ module Worker
     # Hack to get around issues testing this module. Only called during testing
     @export_db_wrk = @import_db_wrk = @hbase_wrk = @s3_wrk = @import_wrk = nil if a[:reset_instance_vars]
     
-    @export_db_wrk ||= Hbacker::Db.new(:export, a[:aws_access_key_id], a[:aws_secret_access_key], 
-      a[:export_hbase_name], a[:reiteration_time])
-    @import_db_wrk ||= Hbacker::Db.new(:import, a[:aws_access_key_id], a[:aws_secret_access_key], 
-      a[:import_hbase_name], a[:reiteration_time])
+    @export_db_wrk ||= Hbacker::Db.new(:export, a[:db_config], 
+      a[:export_hbase_name], a[:aws_access_key_id], 
+      a[:aws_secret_access_key], a[:reiteration_time])
+    @import_db_wrk ||= Hbacker::Db.new(:import, a[:db_config], 
+      a[:import_hbase_name], a[:aws_access_key_id],
+      a[:aws_secret_access_key], a[:reiteration_time])
       
     table_description = @import_db_wrk.column_descriptors(a[:table_name], a[:session_name])
     
