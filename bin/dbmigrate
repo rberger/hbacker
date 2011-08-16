@@ -1,0 +1,18 @@
+#!/usr/bin/env ruby
+
+require "hbacker"
+require "hbacker/mysql"
+require "yaml"
+require "active_record"
+
+db = YAML::load(File.open('config/database.yml'))
+
+db = db['development']
+
+ActiveRecord::Base.establish_connection( :adapter  => db['adapter'],
+                                         :host     => db['hostport'],
+                                         :username => db['username'],
+                                         :password => db['password'],
+                                         :database => db['database'] )
+
+Hbacker::Db.create_export_table_classes "localhost"
