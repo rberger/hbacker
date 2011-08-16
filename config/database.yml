@@ -1,0 +1,17 @@
+# DB migration config for Hbacker tool
+
+migration:
+  adapter: mysql
+  database: hbacker
+  pool: 5
+  timeout: 5000
+  username: root
+  password: password
+
+crud:
+  adapter: mysql
+  database: hbacker
+  pool: 5
+  timeout: 5000
+  username: root
+  password: password
