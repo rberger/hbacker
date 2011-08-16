@@ -381,7 +381,7 @@ module Hbacker
           if [:import, :import_db].include?(task)
             import_hbase_name = options[:import_hbase_host].gsub(/[-\.]/, "_")
             #import_db = Hbacker::Db.new(:import, config['access_key_id'], config['secret_access_key'], import_hbase_name, options[:reiteration_time])
-            import_db = Hbacker::Db.new(:import, db_config, import_hbase_name, options[:reiteration_time])
+            import_db = Hbacker::Db.new(:import, db_config, import_hbase_name, config['access_key_id'], config['secret_access_key'], options[:reiteration_time])
           end
         
           unless [:export_db, :export_db].include?(task)

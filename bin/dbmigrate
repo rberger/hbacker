@@ -3,16 +3,15 @@
 require "hbacker"
 require "hbacker/mysql"
 require "yaml"
-require "active_record"
 
 db = YAML::load(File.open('config/database.yml'))
 
-db = db['development']
+db = db['migration']
 
-ActiveRecord::Base.establish_connection( :adapter  => db['adapter'],
-                                         :host     => db['hostport'],
-                                         :username => db['username'],
-                                         :password => db['password'],
-                                         :database => db['database'] )
+puts "##################"
+puts db.inspect
+puts "##################"
 
-Hbacker::Db.create_export_table_classes "localhost"
+Hbacker::Db.create_connection db
+
+Hbacker::Db.create_export_table_classes

@@ -1,3 +1,5 @@
+
+
 module Hbacker
   require "mysql"
   require 'rubygems'  
@@ -343,8 +345,19 @@ module Hbacker
       end
     end
     # --------------------------------------------
+
+    def self.create_connection(db)
+      puts ">>>>>>>>>>>>>>>>"
+      puts db.inspect
+      puts ">>>>>>>>>>>>>>>>"
+      ActiveRecord::Base.establish_connection( :adapter  => db['adapter'],
+                                         :host     => db['hostport'],
+                                         :username => db['username'],
+                                         :password => db['password'],
+                                         :database => db['database'] )
+    end
     
-    def create_export_table_classes(hbase_name)
+    def self.create_export_table_classes()
       #HbackerSession.hbase_name = hbase_name
 
       begin 
@@ -360,14 +373,13 @@ module Hbacker
       rescue Exception => e
       end
       
-        
       MigrateHbackerSession.up
       MigrateHbaseTable.up
       MigrateColumnDescriptor.up
     end
 
-    def create_import_table_classes(hbase_name)
-      create_export_table_classes hbase_name
+    def self.create_import_table_classes()
+      create_export_table_classes
     end
     
   end
