@@ -254,22 +254,6 @@ module Hbacker
       :default => export_timestamp,
       :desc => "Timestamp for the import session"
       # :desc => "Enable the recreation of empty tables if the original source had empty tables"
-    method_option :db_hostport,
-      :type    => :string,
-      :default => "localhost",
-      :desc    => "Database host[:port], e.g. \"localhost:3306\" or \"db.yoyodyne.com\""
-    method_option :db_username,
-      :type    => :string,
-      :default => "hbacker",
-      :desc    => "User name of the database"
-    method_option :db_password,
-      :type    => :string,
-      :default => "",
-      :desc    => "Password for the database"
-    method_option :db_database,
-      :type    => :string,
-      :default => "hbacker",
-      :desc    => "Database name"
     def import
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
       raise Thor::MalformattedArgumentError, "Can not set bot --tables and --pattern" if options[:tables] && options[:pattern]
@@ -300,22 +284,6 @@ module Hbacker
       :desc => "Must start with a protocol prefix and end with a slash (/). Limit exports to ones that saved in this locaiton",
       :default => "s3n://runa-staging-hbase-backups/",
       :required => true
-    method_option :db_hostport,
-      :type    => :string,
-      :default => "localhost",
-      :desc    => "Database host[:port], e.g. \"localhost:3306\" or \"db.yoyodyne.com\""
-    method_option :db_username,
-      :type    => :string,
-      :default => "hbacker",
-      :desc    => "User name of the database"
-    method_option :db_password,
-      :type    => :string,
-      :default => "",
-      :desc    => "Password for the database"
-    method_option :db_database,
-      :type    => :string,
-      :default => "hbacker",
-      :desc    => "Database name"
     def db
       Hbacker.log.level = options[:debug] ? Logger::DEBUG : Logger::WARN
       
@@ -366,27 +334,20 @@ module Hbacker
 
           db_config = @@db_conf
 
-          #db_config = {
-          #  :hostport => options[:db_hostport],
-          #  :username => options[:db_username],
-          #  :password => options[:db_password],
-          #  :database => options[:db_database]
-          #}
-
-          puts "$$$$$$$$$$$$$$$$$$$$$$"
-          puts "options", options.inspect
-          puts options.class
-          puts "db_config", db_config.inspect
+          #puts "$$$$$$$$$$$$$$$$$$$$$$"
+          #puts "options", options.inspect
+          #puts options.class
+          #puts "db_config", db_config.inspect
           
-          db_keys = ["db_hostport", "db_username", "db_password", "db_database"]
-          db_keys.each do |k|
-            stripped = k.split("db_").last
-            puts stripped.inspect
-            db_config[stripped] = options[k] if options[k] && !options[k].empty?
-          end
-          db_config.symbolize_keys!
-          puts db_config.inspect
-          puts "$$$$$$$$$$$$$$$$$$$$$$"
+          #db_keys = ["db_hostport", "db_username", "db_password", "db_database"]
+          #db_keys.each do |k|
+          #  stripped = k.split("db_").last
+          #  puts stripped.inspect
+          #  db_config[stripped] = options[k] if options[k] && !options[k].empty?
+          #end
+          #db_config.symbolize_keys!
+          #puts db_config.inspect
+          #puts "$$$$$$$$$$$$$$$$$$$$$$"
           
           if [:export, :export_db, :import].include?(task)
             puts "...... Inside :export ......"
@@ -427,10 +388,18 @@ module Hbacker
         end
       end
 
-      def self.start_cli(db_config)
+      def self.set_db_conf(db_config)
         @@db_conf = db_config
-        self.start
       end
+
+      def self.get_db_conf()
+        @@db_conf
+      end
+      
+      #def self.start_cli(db_config)
+      #  @@db_conf = db_config
+      #  self.start
+      #end
 
     end
   end

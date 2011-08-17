@@ -20,6 +20,7 @@ end
 module Worker
   require "hbacker"
   require 'logger'
+  require "hbacker/cli"
   
   class WorkerError < RuntimeError ; end
 
@@ -67,7 +68,9 @@ module Worker
     # Hack to get around issues testing this module. Only called during testing
     @db_wrk = @hbase_wrk = @s3_wrk = @export_wrk = nil if a[:reset_instance_vars]
 
-    @db_wrk ||= Hbacker::Db.new(:export, a[:db_config], a[:export_hbase_name], a[:aws_access_key_id], a[:aws_secret_access_key], a[:reiteration_time])
+    @db_wrk ||= Hbacker::Db.new(:export,
+                                Hbacker::CLI.get_db_conf,  #a[:db_config],
+                                a[:export_hbase_name], a[:aws_access_key_id], a[:aws_secret_access_key], a[:reiteration_time])
     
     @hbase_wrk ||= Hbacker::Hbase.new(a[:hbase_home], a[:hadoop_home], a[:hbase_host], a[:hbase_port])
     @s3_wrk ||= Hbacker::S3.new(a[:aws_access_key_id], a[:aws_secret_access_key])

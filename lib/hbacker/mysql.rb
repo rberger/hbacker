@@ -111,21 +111,22 @@ module Hbacker
       @db_count ||= 0
       @db_count += 1
       
+      Db.create_connection(db_config)
       
-      hostport = @db_config[:hostport] || "localhost"
-      database = @db_config[:database] || "hbacker"
-      username = @db_config[:username] || "root"
-      password = @db_config[:password] || ""
+      #hostport = @db_config[:hostport] || "localhost"
+      #database = @db_config[:database] || "hbacker"
+      #username = @db_config[:username] || "root"
+      #password = @db_config[:password] || ""
       #
-      puts "========================"
-      puts "Connecting to MySQL hostport=#{hostport}, username=#{username}, password=#{password}, database=#{database}"
-      puts "========================"
+      #puts "========================"
+      #puts "Connecting to MySQL hostport=#{hostport}, username=#{username}, password=#{password}, database=#{database}"
+      #puts "========================"
       #Mysql.real_connect(hostport, username, password, database, 3306, "/tmp/mysql.sock")
-      ActiveRecord::Base.establish_connection( :adapter=> "mysql",  
-                                               :host => hostport,
-                                               :username => username,
-                                               :password => password,  
-                                               :database=> database )
+      #ActiveRecord::Base.establish_connection( :adapter=> "mysql",  
+      #                                         :host => hostport,
+      #                                         :username => username,
+      #                                         :password => password,  
+      #                                         :database=> database )
 
       # if @mode == :export
       #   create_export_table_classes(@hbase_name)
@@ -361,10 +362,10 @@ module Hbacker
       puts db.inspect
       puts ">>>>>>>>>>>>>>>>"
       ActiveRecord::Base.establish_connection( :adapter  => db['adapter'],
-                                         :host     => db['hostport'],
-                                         :username => db['username'],
-                                         :password => db['password'],
-                                         :database => db['database'] )
+                                               :host     => db['host'],
+                                               :username => db['username'],
+                                               :password => db['password'],
+                                               :database => db['database'] )
     end
     
     def self.create_export_table_classes()

@@ -20,5 +20,7 @@ require "yaml"
 
 db = YAML::load(File.open('config/database.yml'))
 db = db['crud']
+Hbacker::CLI.set_db_conf db
 
-Hbacker::CLI.start_cli db
+#Hbacker::CLI.start_cli db
+Hbacker::CLI.start

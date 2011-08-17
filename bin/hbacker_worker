@@ -19,4 +19,11 @@ require File.expand_path(File.join(File.dirname(__FILE__), "../", "lib", "stalke
 
 require "worker"
 
+require "hbacker/cli"
+require "yaml"
+
+db = YAML::load(File.open('config/database.yml'))
+db = db['crud']
+Hbacker::CLI.set_db_conf db
+
 Stalker.work

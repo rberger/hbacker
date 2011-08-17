@@ -2,6 +2,7 @@
 
 migration:
   adapter: mysql
+  host: Shantanu-Kumars-MacBook-Pro.local
   database: hbacker
   pool: 5
   timeout: 5000
@@ -10,6 +11,7 @@ migration:
 
 crud:
   adapter: mysql
+  host: Shantanu-Kumars-MacBook-Pro.local
   database: hbacker
   pool: 5
   timeout: 5000
