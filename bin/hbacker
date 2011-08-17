@@ -16,5 +16,9 @@
 #    
 require "hbacker"
 require "hbacker/cli"
+require "yaml"
 
-Hbacker::CLI.start
+db = YAML::load(File.open('config/database.yml'))
+db = db['crud']
+
+Hbacker::CLI.start_cli db

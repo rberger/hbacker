@@ -4,6 +4,8 @@ module Hbacker
   require "mysql"
   require 'rubygems'  
   require 'active_record'
+
+  ActiveRecord::Base.logger = Logger.new(STDOUT)
   
   ## --- Model ---
   
@@ -101,6 +103,7 @@ module Hbacker
   class Db
     attr_reader :db_config, :hbase_name, :aws_access_key_id, :aws_secret_access_key
     def initialize(mode, db_config, hbase_name, aws_access_key_id, aws_secret_access_key, reiteration_time=5)
+      @mode = mode
       @db_config = db_config
       @aws_access_key_id = aws_access_key_id
       @aws_secret_access_key = aws_secret_access_key
@@ -270,12 +273,14 @@ module Hbacker
     #
     def table_names(session_name, dest_root, table_name=nil)
       if table_name && table_name.include?("%")
-        conditions = ['mode = ? AND table_name like ? AND session_name = ? AND dest_root = ?', @mode, table_name, session_name, dest_root]
+        session_name = @@hbase_session
+        hbase_session = HbaseSession.where(:session_name => session_name).first
+        conditions = ['mode = ? AND table_name like ? AND session_name = ?', @mode, table_name, session_name]
       else
-        conditions = ['mode = ? AND session_name = ? AND dest_root = ?', @mode, session_name, dest_root]
+        conditions = ['mode = ? AND session_name = ?', @mode, session_name]
       end
-      
-      results = HbaseTable.select(:all, :conditions => conditions).collect do |t|
+      puts "LAST"
+      results = HbaseTable.where(conditions).all.select{|table| table.hbase_session.dest_root == dest_root }.collect do |t|
         t.reload
         t[:table_name]
       end
@@ -289,16 +294,21 @@ module Hbacker
     # @return [Array<Hash>] List of table info that were backed up for specified session
     #
     def list_table_info(session_name, dest_root, table_name=nil)
+      puts "@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
       if table_name && table_name.include?("%")
         conditions = ['mode = ? AND table_name like ? AND session_name = ? AND dest_root = ?', @mode, table_name, session_name, dest_root]
       else
         conditions = ['mode = ? AND session_name = ? AND dest_root = ?', @mode, session_name, dest_root]
-      end
-      
-      results = HbaseTable.select(:all, :conditions => conditions).collect do |t|
+      end 
+      puts "@@@@@@@@@@@@@@@@@@@@@@@@@@@@"     
+      results = HbaseTable.where(conditions).allcollect do |t|
         t.reload
         t.attributes
       end
+
+        puts "entered"
+        puts "@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+
     end
     
     ##

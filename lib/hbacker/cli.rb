@@ -364,12 +364,29 @@ module Hbacker
         begin
           config = YAML.load_file(File.expand_path(options[:aws_config]))
 
-          db_config = {
-            :hostport => options[:db_hostport],
-            :username => options[:db_username],
-            :password => options[:db_password],
-            :database => options[:db_database]
-          }
+          db_config = @@db_conf
+
+          #db_config = {
+          #  :hostport => options[:db_hostport],
+          #  :username => options[:db_username],
+          #  :password => options[:db_password],
+          #  :database => options[:db_database]
+          #}
+
+          puts "$$$$$$$$$$$$$$$$$$$$$$"
+          puts "options", options.inspect
+          puts options.class
+          puts "db_config", db_config.inspect
+          
+          db_keys = ["db_hostport", "db_username", "db_password", "db_database"]
+          db_keys.each do |k|
+            stripped = k.split("db_").last
+            puts stripped.inspect
+            db_config[stripped] = options[k] if options[k] && !options[k].empty?
+          end
+          db_config.symbolize_keys!
+          puts db_config.inspect
+          puts "$$$$$$$$$$$$$$$$$$$$$$"
           
           if [:export, :export_db, :import].include?(task)
             puts "...... Inside :export ......"
@@ -408,6 +425,11 @@ module Hbacker
         rescue Hbase::HbaseConnectionError => e
           raise Thor::InvocationError, e.message
         end
+      end
+
+      def self.start_cli(db_config)
+        @@db_conf = db_config
+        self.start
       end
 
     end
