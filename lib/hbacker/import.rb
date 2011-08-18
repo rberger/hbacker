@@ -48,6 +48,7 @@ module Hbacker
         @import_db.start_info(opts[:session_name], opts[:source_root], opts[:start_time], opts[:end_time], Time.now.utc)
 
         exported_table_names = @export_db.table_names(:export, opts[:session_name], opts[:source_root])
+        Hbacker.log.debug "import.rb/specified_tables/exported_table_names: #{exported_table_names.inspect}"
         if opts[:tables]
         # Only import the tables specified in opts[:tables]
           exported_table_names = exported_table_names & opts[:tables]

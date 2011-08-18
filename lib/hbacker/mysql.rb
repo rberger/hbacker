@@ -292,8 +292,10 @@ module Hbacker
       else
         conditions = ['mode = ? AND session_name = ?', @mode, session_name]
       end
-      puts "LAST"
-      results = HbaseTable.where(conditions).all.select{|table| table.hbase_session.dest_root == dest_root }.collect do |t|
+      Hbacker.log.debug "Db(mysql.rb)/table_names/conditions: #{conditions.inspect}"
+      cond_result = HbaseTable.where(conditions)
+      Hbacker.log.debug "Cond result rows: #{cond_result.inspect}"
+      results = cond_result.all.select{|table| table.hbase_session.dest_root == dest_root }.collect do |t|
         t.reload
         t[:table_name]
       end
