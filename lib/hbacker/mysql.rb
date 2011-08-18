@@ -272,7 +272,7 @@ module Hbacker
       info.reload
       Hbacker.log.debug "end_info(session_name: #{session_name.inspect}, dest_root: #{dest_root.inspect}, ended_at: #{ended_at.inspect}, error: #{error.inspect}"
       puts "=======OBject id"
-      puts info.first
+      puts info.inspect
       HbackerSession.update(info.first.id, :error      => error.empty? ? false : true,
                             :error_info => error.empty? ? nil : error[:info],
                             :ended_at   => ended_at,
