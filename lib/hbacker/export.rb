@@ -144,6 +144,8 @@ module Hbacker
     #
     def table(table_name, start_time, end_time, destination, versions, session_name)
       table_descriptor = @hbase.table_descriptor(table_name)
+      table_descriptor_verbose = table_descriptor.inspect
+      Hbacker.log.debug "Table descriptor for #{table_name}: #{table_descriptor_verbose}"
       
       cmd = "#{@hadoop_home}/bin/hadoop jar #{@hbase_home}/hbase-#{@hbase_version}.jar export " +
         "#{table_name} #{destination} #{versions} #{start_time} #{end_time}"

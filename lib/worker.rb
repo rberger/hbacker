@@ -26,7 +26,11 @@ module Worker
 
   # Looks like Stalker allows for only a single error block for all jobs
   Stalker.error do |e, name, args, job, style_opts|
+    puts "hello"
     Hbacker.log.error "WORKER ERROR: job: #{name} e: #{e.inspect}"
+    puts "running"
+    Hbacker.log.error e.backtrace.inspect
+    puts "bye"
     
     if (e.class == RightAws::AwsError) && (e.include?(/ServiceUnavailable/))
       Hbacker.log.warn "ServiceUnavailable. Releasing job back on queue"
@@ -37,7 +41,7 @@ module Worker
     if name =~ /import/
       @import_db_wrk.imported_table_info(args[:table_name], args[:session_name], false, {:info => "#{e.class}: #{e.message}"})
     elsif name =~ /export/
-      @db_wrk.exported_table_info(args[:table_name], args[:start_time], args[:end_time], nil,  
+      @db_wrk.exported_table_info(args[:table_name], args[:start_time], args[:end_time], nil, \
         args[:versions], args[:session_name], false, {:info => "#{e.class}: #{e.message}"})
     end
     job.bury

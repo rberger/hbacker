@@ -62,7 +62,8 @@ module Hbacker
         t.string   :error_info
         t.datetime :created_at, :default => Time.now.utc # lambda{ Time.now.utc }
         t.datetime :updated_at
-        t.integer  :hbacker_session_id
+        t.references :hbacker_session
+        #t.integer  :hbacker_session_id
       end
     end
     
@@ -90,7 +91,8 @@ module Hbacker
         t.integer  :ttl
         t.datetime :updated_at
         t.datetime :created_at, :default => Time.now.utc # lambda{ Time.now.utc }
-        t.integer  :hbase_table_id
+        t.references :hbase_table
+        #t.integer  :hbase_table_id
       end
     end
     
@@ -136,7 +138,7 @@ module Hbacker
       #       
     end
     
-    class MysqlError < HbackerError ; end
+    class DbError < HbackerError ; end
     
     # Records Exported HBase Table Info into SimpleDB table
     # @param [String] table_name Name of the HBase Table
@@ -164,11 +166,21 @@ module Hbacker
         :updated_at   => now
       }
       session = HbackerSession.where(:session_name => session_name)
-      raise DbError, "No record with session_name #{session_name}" unless session
+      raise DbError, "No record with session_name #{session_name}" if session.empty?
 
-      table = session.hbase_tables.create(table_info)
+      table = session.shift.hbase_tables.create(table_info)
+      #table = session.shift.hbase_tables << table_info
+      #----
+      #sid = session.shift
+      #puts "Session ID", sid
+      #table = HbaseTable.new(table_info.merge("hbacker_session_id" => sid))
+      #table.save
+      #----
       #ExportedHbaseTable.create(table_info)
-      
+
+      puts "%%%%%%%%%%"
+      puts table_descriptor.inspect
+      puts "%%%%%%%%%%"
       if table_descriptor
         table_descriptor.column_families_to_hashes.each do |column|
           column.merge!({ :table_name   => table_name, 
