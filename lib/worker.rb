@@ -39,8 +39,10 @@ module Worker
     end
 
     if name =~ /import/
+      @import_db_wrk.mode = :import
       @import_db_wrk.imported_table_info(args[:table_name], args[:session_name], false, {:info => "#{e.class}: #{e.message}"})
     elsif name =~ /export/
+      @db_wrk.mode = :export
       @db_wrk.exported_table_info(args[:table_name], args[:start_time], args[:end_time], nil, \
         args[:versions], args[:session_name], false, {:info => "#{e.class}: #{e.message}"})
     end
