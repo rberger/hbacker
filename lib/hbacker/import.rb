@@ -45,7 +45,6 @@ module Hbacker
       begin
         opts = Hbacker.transform_keys_to_symbols(opts)
 
-        @import_db.mode = :import
         @import_db.start_info(opts[:session_name], opts[:source_root], opts[:start_time], opts[:end_time], Time.now.utc)
 
         exported_table_names = @export_db.table_names(:export, opts[:session_name], opts[:source_root])
