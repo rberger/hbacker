@@ -80,7 +80,7 @@ module Hbacker
         Hbacker.log.error "Hbacker::Import#specified_tables: EXCEPTION: #{e.inspect}"
         Hbacker.log.error caller.join("\n")
         @import_db.end_info(opts[:session_name], opts[:source_root], Time.now.utc, {:info => "#{e.class}: #{e.message}"})
-        raise ImportError, "#{e.class}: #{e.message}"
+        raise ImportError, "#{e.class}: #{e.message} #{e.backtrace}"
       end
       @import_db.end_info(opts[:session_name], opts[:source_root], Time.now.utc)
     end
