@@ -212,16 +212,6 @@ module Hbacker
       raise DbError, "No record with session_name #{session_name}" unless session
       
       table = session.shift.hbase_tables.create(table_info)
-      
-      if table_descriptor
-        table_descriptor.column_families_to_hashes.each do |column|
-          column.merge!({ :table_name   => table_name, 
-                          :session_name => session_name,
-                          :updated_at   => now })
-          table.column_descriptors.create(column)
-          #ImportedColumnDescriptor.create(column)
-        end
-      end
     end
 
 
@@ -306,21 +296,15 @@ module Hbacker
     # @return [Array<Hash>] List of table info that were backed up for specified session
     #
     def list_table_info(session_name, dest_root, table_name=nil)
-      puts "@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
       if table_name && table_name.include?("%")
         conditions = ['mode = ? AND table_name like ? AND session_name = ? AND dest_root = ?', @mode, table_name, session_name, dest_root]
       else
         conditions = ['mode = ? AND session_name = ? AND dest_root = ?', @mode, session_name, dest_root]
       end 
-      puts "@@@@@@@@@@@@@@@@@@@@@@@@@@@@"     
       results = HbaseTable.where(conditions).allcollect do |t|
         t.reload
         t.attributes
       end
-
-        puts "entered"
-        puts "@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-
     end
     
     ##
@@ -333,7 +317,7 @@ module Hbacker
       results = {}
 
       #TODO: find what is `k` and replace with MySQL calls
-      ColumnDescriptor.where(:mode => @mode, :session => session_name, :table => table_name).each do |t|
+      ColumnDescriptor.where(:mode => @mode, :session_name => session_name, :table_name => table_name).each do |t|
         t.reload
         t.each_pair do |k,v|
           results.merge(k.to_sym => v) if Stargate::Model::ColumnDescriptor.AVAILABLE_OPTS[k]
