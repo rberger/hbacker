@@ -178,9 +178,6 @@ module Hbacker
       #----
       #ExportedHbaseTable.create(table_info)
 
-      puts "%%%%%%%%%%"
-      puts table_descriptor.inspect
-      puts "%%%%%%%%%%"
       if table_descriptor
         table_descriptor.column_families_to_hashes.each do |column|
           column.merge!({ :table_name   => table_name, 
@@ -214,7 +211,7 @@ module Hbacker
       session = HbackerSession.where(:session_name => session_name)
       raise DbError, "No record with session_name #{session_name}" unless session
       
-      table = session.hbase_tables.create(table_info)
+      table = session.shift.hbase_tables.create(table_info)
       
       if table_descriptor
         table_descriptor.column_families_to_hashes.each do |column|
