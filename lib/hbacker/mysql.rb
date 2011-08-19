@@ -288,14 +288,14 @@ module Hbacker
       if table_name && table_name.include?("%")
         session_name = @@hbase_session
         hbase_session = HbaseSession.where(:session_name => session_name).first
-        conditions = ['mode = ? AND table_name like ? AND session_name = ?', @mode, table_name, session_name]
+        conditions = ['mode = ? AND table_name like ? AND session_name = ?', @mode.to_s, table_name, session_name]
       else
-        conditions = ['mode = ? AND session_name = ?', @mode, session_name]
+        conditions = ['mode = ? AND session_name = ?', @mode.to_s, session_name]
       end
       Hbacker.log.debug "Db(mysql.rb)/table_names/conditions: #{conditions.inspect}"
       cond_result = HbaseTable.where(conditions)
       Hbacker.log.debug "Cond result rows: #{cond_result.inspect}"
-      results = cond_result.all.select{|table| table.hbase_session.dest_root == dest_root }.collect do |t|
+      results = cond_result.all.select{|table| table.hbacker_session.dest_root == dest_root }.collect do |t|
         t.reload
         t[:table_name]
       end
