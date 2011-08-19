@@ -14,6 +14,8 @@
 #    
 module Hbacker
   require "hbacker"
+  require "stalker"
+  require File.expand_path(File.join(File.dirname(__FILE__), "../", "stalker"))  
   
   class Import
     ##
@@ -110,8 +112,8 @@ module Hbacker
         :reiteration_time => reiteration_time,
         :restore_empty_tables => restore_empty_tables
       }
-      Hbacker.log.debug "------- Stalker.enqueue('queue_table_import_job', args, {:ttr => #{timeout}})"
-      Stalker.enqueue('queue_table_import_job', args, {:ttr => timeout}, true, :no_bury_for_error_handler => true)
+      Hbacker.log.debug "------- Stalker.enqueue('queue_table_import', args, {:ttr => #{timeout}})"
+      Stalker.enqueue('queue_table_import', args, {:ttr => timeout}, true, :no_bury_for_error_handler => true)
     end
 
     ##

@@ -115,6 +115,7 @@ module Worker
   Stalker.job 'queue_table_import' do |args, job, style_opts|
     a = Hbacker.transform_keys_to_symbols(args)
     Hbacker.log.level = a[:log_level] ? a[:log_level] : Logger::DEBUG
+    Hbacker.log.debug "#{a.inspect}"
 
     # Hack to get around issues testing this module. Only called during testing
     @export_db_wrk = @import_db_wrk = @hbase_wrk = @s3_wrk = @import_wrk = nil if a[:reset_instance_vars]
