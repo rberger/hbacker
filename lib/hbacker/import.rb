@@ -127,7 +127,7 @@ module Hbacker
       begin
         table_status = @hbase.create_table(table_name, table_description)
       rescue Hbase::TableFailCreateError
-        Hbacker.log.warn "Hbacker::Import#table: Table #{name} already exists. Continuing"
+        Hbacker.log.warn "Hbacker::Import#table: Table #{table_name} already exists. Continuing"
       end
       
       raise TableCreateError, "Improper result from @hbase.create_table(#{table_name}, table_description)" unless table_status
