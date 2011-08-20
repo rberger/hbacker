@@ -31,6 +31,8 @@ module Stargate
           hsh
         end
       end
+      def create_table_descriptor(name, column_families)
+      end
     end
   end
   
