@@ -117,6 +117,17 @@ module Hbacker
       Stalker.enqueue('queue_table_import', args, {:ttr => timeout}, true, :no_bury_for_error_handler => true)
     end
 
+    def cd(rows)
+      Hbacker.log.debug "import.rb/cd - rows = #{rows.inspect}"
+      result = {}
+      rows.each do |r|
+        Hbacker.log.debug "r = #{r.inspect}, r.name = #{r.name}"
+        result.merge!(r.name.to_sym => Hbacker.transform_keys_to_symbols(r.attributes))
+      end
+      Hbacker.log.debug "import.rb/cd - result = #{result.inspect}"
+      result
+    end
+    
     ##
     # Uses Hadoop to import specfied table from source file system to target HBase Cluster
     # @param [String] table_name The name of the table to import
@@ -131,7 +142,7 @@ module Hbacker
       begin
         table_descriptor = Stargate::Model::TableDescriptor.create_table_descriptor(table_name, column_descriptors)
         Hbacker.log.debug "table_descriptor: #{table_descriptor.inspect}"
-        table_status = @hbase.create_table(table_name, table_descriptor)
+        table_status = @hbase.create_table(table_name, cd(column_descriptors))
       rescue Hbase::TableFailCreateError
         Hbacker.log.warn "Hbacker::Import#table: Table #{table_name} already exists. Continuing"
       end

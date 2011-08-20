@@ -315,7 +315,7 @@ module Hbacker
     #
     def column_descriptors(table_name, session_name)
       Hbacker.log.debug "Mysql#column_descriptors TOP table_name: #{table_name} session_name: #{session_name}"
-      ColumnDescriptor.where(:session_name => session_name, :table_name => table_name)
+      ColumnDescriptor.where(:session_name => session_name, :table_name => table_name).all
     end
 
     # Returns a list of info for exports for the specified session
