@@ -32,7 +32,15 @@ module Stargate
         end
       end
       def self.create_table_descriptor(name, column_descriptors)
-        column_families = column_descriptors.map { |cd| ColumnDescriptor.new(cd) }
+        clean_column_descriptors = column_descriptors.map do |cd|
+          column_descriptor = {}
+          cd.each do |k,v|
+            Hbacker.log.debug "k: #{k.inspect} v: #{v.inspect}"
+            column_descriptor.merge(k.to_sym => v) if Stargate::Model::ColumnDescriptor.AVAILABLE_OPTS[k]
+          end
+          column_descriptor
+        end
+        column_families = clean_column_descriptors.map { |cd| ColumnDescriptor.new(cd) }
         TableDescriptor.new(:name => name, :column_families => column_families)
       end
     end
