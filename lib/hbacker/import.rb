@@ -123,6 +123,7 @@ module Hbacker
     # @param [Boolean] Restore empty tables based on data stored in SimpleDB for the session (Not Implemented)
     #
     def table(table_name, source, import_session_name, table_description, restore_empty_tables=false)
+      Hbacker.log.debug "@hbase.create_table(table_name = #{table_name.inspect}, table_description = #{table_description.inspect})"
       
       begin
         table_status = @hbase.create_table(table_name, table_description)
@@ -139,7 +140,7 @@ module Hbacker
       # Hbacker.log.debug "cmd output: #{cmd_output}"
       
       if $?.exitstatus > 0
-        Hbacker.log.error"Hadoop command failed: #{cmd}"
+        Hbacker.log.error "Hadoop command failed: #{cmd}"
         Hbacker.log.error cmd_output
         @s3.save_info("#{source}hbacker_hadoop_import_error_import_#{import_session_name}.log", cmd_output)
         raise ImportError, "Error running Haddop Command", caller

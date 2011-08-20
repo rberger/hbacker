@@ -311,13 +311,14 @@ module Hbacker
     # Get the Attributes of an HBase table previously recorded ColumnDescriptor Opts
     # @param [String] table_name The name of the HBase table 
     # @param (see #table_names)
-    # @return [Array <Stargate::Model::ColumnDescriptor>] An Array of 
+    # @return [Hash] The hash of attributes found
     #
-    def column_families(table_name, session_name)
+    def column_descriptors(table_name, session_name)
       results = {}
 
       #TODO: find what is `k` and replace with MySQL calls
       ColumnDescriptor.where(:mode => @mode, :session_name => session_name, :table_name => table_name).each do |t|
+        t.reload
         t.each_pair do |k,v|
           results.merge(k.to_sym => v) if Stargate::Model::ColumnDescriptor.AVAILABLE_OPTS[k]
         end
