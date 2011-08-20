@@ -32,11 +32,12 @@ module Stargate
         end
       end
       def self.create_table_descriptor(name, column_descriptors)
+        Hbacker.log.debug "stargate.rb/create_table_descriptors - column_descriptors = #{column_descriptors.inspect}"
         clean_column_descriptors = column_descriptors.map do |cd|
           column_descriptor = {}
-          cd.each do |k,v|
+          cd.attributes.each do |k,v|
             Hbacker.log.debug "k: #{k.inspect} v: #{v.inspect}"
-            column_descriptor.merge(k.to_sym => v) if Stargate::Model::ColumnDescriptor.AVAILABLE_OPTS[k]
+            column_descriptor.merge(k.to_sym => v) if ColumnDescriptor::AVAILABLE_OPTS.include?(k)
           end
           column_descriptor
         end

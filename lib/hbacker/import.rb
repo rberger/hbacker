@@ -15,6 +15,7 @@
 module Hbacker
   require "hbacker"
   require "stalker"
+  require "stargate"
   require File.expand_path(File.join(File.dirname(__FILE__), "../", "stalker"))  
   
   class Import
@@ -128,7 +129,7 @@ module Hbacker
       Hbacker.log.debug "Import#table(table_name: #{table_name.inspect} column_descriptors: #{column_descriptors.inspect})"
       
       begin
-        table_descriptor = Stargate::Model.TableDescriptor.create_table_descriptor(table_name, column_descriptors)
+        table_descriptor = Stargate::Model::TableDescriptor.create_table_descriptor(table_name, column_descriptors)
         Hbacker.log.debug "table_descriptor: #{table_descriptor.inspect}"
         table_status = @hbase.create_table(table_name, table_descriptor)
       rescue Hbase::TableFailCreateError
