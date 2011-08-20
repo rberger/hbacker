@@ -315,18 +315,7 @@ module Hbacker
     #
     def column_descriptors(table_name, session_name)
       Hbacker.log.debug "Mysql#column_descriptors TOP table_name: #{table_name} session_name: #{session_name}"
-      column_descriptors = []
-      ColumnDescriptor.where(:mode => @mode, :session_name => session_name, :table_name => table_name).each do |cd|
-        Hbacker.log.debug "cd: #{cd.inspect}"
-        column_descriptor = {}
-        cd.column_hashes.each_pair do |k,v|
-          Hbacker.log.debug "k: #{k.inspect} v: #{v.inspect}"
-          column_descriptor.merge(k.to_sym => v) if Stargate::Model::ColumnDescriptor.AVAILABLE_OPTS[k]
-        end
-        column_descriptors << column_descriptor
-      end
-      Hbacker.log.debug "Mysql#column_descriptors END column_descriptors: #{column_descriptors.inspect}"
-      column_descriptors
+      ColumnDescriptor.where(:mode => @mode, :session_name => session_name, :table_name => table_name)
     end
 
     # Returns a list of info for exports for the specified session
