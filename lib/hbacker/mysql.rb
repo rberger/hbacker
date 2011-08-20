@@ -314,12 +314,15 @@ module Hbacker
     # @return [Hash] The hash of attributes found
     #
     def column_descriptors(table_name, session_name)
+      cond_results = ColumnDescriptor.where(:session_name => session_name, :table_name => table_name);
+      Hbacker.log.debug "mysql.rb/column_descriptors - cond_results(session_name=#{session_name}, :table_name=#{table_name}) => #{cond_results.inspect}"
+      
       results = {}
 
       #TODO: find what is `k` and replace with MySQL calls
-      ColumnDescriptor.where(:mode => @mode, :session_name => session_name, :table_name => table_name).each do |t|
+      cond_results.each do |t|
         t.reload
-        t.each_pair do |k,v|
+        ColumnDescriptor.columns_hash.each_pair do |k,v|
           results.merge(k.to_sym => v) if Stargate::Model::ColumnDescriptor.AVAILABLE_OPTS[k]
         end
       end
