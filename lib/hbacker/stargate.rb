@@ -31,7 +31,9 @@ module Stargate
           hsh
         end
       end
-      def create_table_descriptor(name, column_families)
+      def self.create_table_descriptor(name, column_descriptors)
+        column_families = column_descriptors.map { |cd| ColumnDescriptor.new(cd) }
+        TableDescriptor.new(:name => name, :column_families => column_families)
       end
     end
   end

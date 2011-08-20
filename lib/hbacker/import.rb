@@ -120,18 +120,22 @@ module Hbacker
     # Uses Hadoop to import specfied table from source file system to target HBase Cluster
     # @param [String] table_name The name of the table to import
     # @param [String] source scheme://source_path/session_name/ to the export data
+    # @param [String] import_session_name The Session name associated with this
+    # @param [Array <Hash>] column_descriptors Array of hashes containing the column_descriptors
     # @param [Boolean] Restore empty tables based on data stored in SimpleDB for the session (Not Implemented)
     #
-    def table(table_name, source, import_session_name, table_description, restore_empty_tables=false)
-      Hbacker.log.debug "@hbase.create_table(table_name = #{table_name.inspect}, table_description = #{table_description.inspect})"
+    def table(table_name, source, import_session_name, column_descriptors, restore_empty_tables=false)
+      Hbacker.log.debug "Import#table(table_name: #{table_name.inspect} column_descriptors: #{column_descriptors.inspect})"
       
       begin
-        table_status = @hbase.create_table(table_name, table_description)
+        table_descriptor = Stargate::Model.TableDescriptor.create_table_descriptor(table_name, column_descriptors)
+        Hbacker.log.debug "table_descriptor: #{table_descriptor.inspect}"
+        table_status = @hbase.create_table(table_name, table_descriptor)
       rescue Hbase::TableFailCreateError
         Hbacker.log.warn "Hbacker::Import#table: Table #{table_name} already exists. Continuing"
       end
       
-      raise TableCreateError, "Improper result from @hbase.create_table(#{table_name}, table_description)" unless table_status
+      raise TableCreateError, "Improper result from @hbase.create_table(#{table_name}, table_descriptor)" unless table_status
       
       cmd = "#{@hadoop_home}/bin/hadoop jar #{@hbase_home}/hbase-#{@hbase_version}.jar import " +
         "#{table_name} #{source}"

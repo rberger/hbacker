@@ -129,7 +129,7 @@ module Worker
                                        a[:import_hbase_name], a[:aws_access_key_id],
                                        a[:aws_secret_access_key], a[:reiteration_time])
       
-    table_description = @import_db_wrk.column_descriptors(a[:table_name], a[:session_name])
+    column_descriptors = @import_db_wrk.column_descriptors(a[:table_name], a[:session_name])
     
     @hbase_wrk ||= Hbacker::Hbase.new(a[:hbase_home], a[:hadoop_home], a[:hbase_host], a[:hbase_port])
     @s3_wrk ||= Hbacker::S3.new(a[:aws_access_key_id], a[:aws_secret_access_key])
@@ -140,7 +140,7 @@ module Worker
       raise WorkerError, "Import Timedout waiting #{10000 *2} seconds for Hadoop Map Reduce Queue to be less than #{a[:mapred_max_jobs]} jobs"
     end
     Hbacker.log.info "Importing  #{a[:table_name]} from #{a[:source]} import_session: #{ a[:import_session_name]}"
-    @import_wrk.table(a[:table_name], a[:source], a[:import_session_name], table_description)
+    @import_wrk.table(a[:table_name], a[:source], a[:import_session_name], column_descriptors)
   end
   
 end
