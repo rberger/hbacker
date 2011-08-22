@@ -35,7 +35,7 @@ module Stargate
         Hbacker.log.debug "stargate.rb/create_table_descriptors - column_descriptors = #{column_descriptors.inspect}"
         clean_column_descriptors = column_descriptors.map do |cd|
           column_descriptor = {}
-          cd.attributes.each do |k,v|
+          cd.each do |k,v|
             Hbacker.log.debug "k: #{k.inspect} v: #{v.inspect}"
             k = k.to_sym
             column_descriptor.merge!({k => v}) if ColumnDescriptor::AVAILABLE_OPTS.include? k

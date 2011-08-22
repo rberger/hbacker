@@ -316,7 +316,7 @@ module Hbacker
     def column_descriptors(table_name, session_name)
       Hbacker.log.debug "Mysql#column_descriptors TOP table_name: #{table_name} session_name: #{session_name}"
       results = ColumnDescriptor.where(:session_name => session_name, :table_name => table_name).all
-      return if results.nil? OR results.empty?
+      return if results.nil? || results.empty?
       clean_column_descriptors = results.map do |cd|
         new_cd = {}
         cd.attributes.each do |k,v|
