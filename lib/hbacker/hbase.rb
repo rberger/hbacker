@@ -70,7 +70,7 @@ module Hbacker
     ##
     # Create HBase Table
     # @param [String] name Name of the HBase Table to create
-    # @param [Hash] schema Keypairs describing the Table Schema Hash
+    # @param [Array <Hash>] schema Keypairs describing the Table Schema Hash
     # @return [Hash] status Status of create_table call
     # @option status [Stargate::Model::TableDescriptor] :created Everything is cool.
     # @option status [Stargate::Model::TableDescriptor] :exists If the table already exists. Value is the TableDescriptor
@@ -82,7 +82,7 @@ module Hbacker
       result = nil
 
       begin
-        result = @stargate.create_table(name, schema)
+        result = @stargate.create_table(name, *schema)
       rescue Stargate::TableExistsError => e
         raise Hbase::TableFailCreateError, "Table #{@stargate.show_table(name)} Already Exists"
       rescue Stargate::TableFailCreateError => e

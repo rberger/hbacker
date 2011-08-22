@@ -37,7 +37,8 @@ module Stargate
           column_descriptor = {}
           cd.attributes.each do |k,v|
             Hbacker.log.debug "k: #{k.inspect} v: #{v.inspect}"
-            column_descriptor.merge(k.to_sym => v) if ColumnDescriptor::AVAILABLE_OPTS.include?(k)
+            k = k.to_sym
+            column_descriptor.merge!({k => v}) if ColumnDescriptor::AVAILABLE_OPTS.include? k
           end
           column_descriptor
         end

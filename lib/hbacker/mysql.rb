@@ -311,11 +311,20 @@ module Hbacker
     # Build an array of HBacker::ColumnDescriptor instances from info stored in DB
     # @param [String] table_name The name of the HBase table 
     # @param [String] session_name The name of the Session the table is from
-    # @return [Array <HBacker::ColumnDescriptor>] The hash of ColumnDescriptors found
+    # @return [Array <Hash>] An Array of Hashes that include only legal keypairs for Stargate#create_table
     #
     def column_descriptors(table_name, session_name)
       Hbacker.log.debug "Mysql#column_descriptors TOP table_name: #{table_name} session_name: #{session_name}"
-      ColumnDescriptor.where(:session_name => session_name, :table_name => table_name).all
+      results = ColumnDescriptor.where(:session_name => session_name, :table_name => table_name).all
+      return if results.nil? OR results.empty?
+      clean_column_descriptors = results.map do |cd|
+        new_cd = {}
+        cd.attributes.each do |k,v|
+          k = k.to_sym
+          new_cd.merge!({k => v}) if Stargate::Model::ColumnDescriptor::AVAILABLE_OPTS.include? k
+        end
+        new_cd
+      end
     end
 
     # Returns a list of info for exports for the specified session

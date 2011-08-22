@@ -118,7 +118,7 @@ Right now the easiest way to start the workers is something like this on the mac
 
 
 This will run 16 workers:
-<code>for i in {1..16}; do hbacker_worker  > worker_$i.log 2>&1 &  done</code>
+<code>for i in {1..4}; do bundle exec bin/hbacker_worker  1> LOGS/worker_$i.log 2>&1 & done</code>
 
 h3. Start the main process
 
