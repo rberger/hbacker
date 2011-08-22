@@ -320,6 +320,7 @@ module Hbacker
       clean_column_descriptors = results.map do |cd|
         new_cd = {}
         cd.attributes.each do |k,v|
+          next if v.nil?
           k = k.to_sym
           new_cd.merge!({k => v}) if Stargate::Model::ColumnDescriptor::AVAILABLE_OPTS.include? k
         end
