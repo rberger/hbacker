@@ -79,18 +79,20 @@ module Hbacker
     # @option status [String] :wtf Should never get this exception
     #
     def create_table(name, schema)
+      Hbacker.log.debug "Hbase#create_table name: #{name.inspect} schema: #{schema.inspect}"
       result = nil
+      result = @stargate.create_table(name, *schema)
 
-      begin
-        result = @stargate.create_table(name, *schema)
-      rescue Stargate::TableExistsError => e
-        raise Hbase::TableFailCreateError, "Table #{@stargate.show_table(name)} Already Exists"
-      rescue Stargate::TableFailCreateError => e
-        raise Hbase::TableFailCreateError, e.message
-      rescue Exception => e
-        raise Hbase::HbaseError, e.message, caller
-      end
-      return result
+      # begin
+      #   result = @stargate.create_table(name, *schema)
+      # rescue Stargate::TableExistsError => e
+      #   raise Hbase::TableFailCreateError, "Table #{@stargate.show_table(name)} Already Exists"
+      # rescue Stargate::TableFailCreateError => e
+      #   raise Hbase::TableFailCreateError, e.message
+      # rescue Exception => e
+      #   raise Hbase::HbaseError, e.message, caller
+      # end
+      # return result
     end
 
     def jobs_in_hadop_queue
