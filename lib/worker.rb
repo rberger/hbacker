@@ -81,7 +81,11 @@ module Worker
     @export_wrk ||= Hbacker::Export.new(@hbase_wrk, @db_wrk, a[:hbase_home], a[:hbase_version], a[:hadoop_home], @s3_wrk)
 
     has_rows = @hbase_wrk.table_has_rows?(a[:table_name])
-      
+
+    if @db_wrk.exists?(a[:table_name])
+      break
+    end
+    
     if has_rows
       if @hbase_wrk.wait_for_mapred_queue(a[:mapred_max_jobs], 10000, 2) != :ok
         raise WorkerError, "Export Timedout waiting #{10000 *2} seconds for Hadoop Map Reduce Queue to be less than #{a[:mapred_max_jobs]} jobs"

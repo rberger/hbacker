@@ -287,6 +287,16 @@ module Hbacker
         t[:table_name]
       end
     end
+
+    def exists?(table_name)
+      cond_result = HbaseTable.where(:table_name => table_name)
+      Hbacker.log.debug "Cond result rows: #{cond_result.inspect}"
+      results = cond_result.collect do |t|
+        t.reload
+        t[:table_name]
+      end
+      results.include? table_name
+    end
     
     # Returns a list of info for tables backed up during the specified session
     # @param [String] session_name Name (usually the date_time_stamp) of the export session
@@ -328,6 +338,7 @@ module Hbacker
       end
     end
 
+    
     # Returns a list of info for exports for the specified session
     # @param [Symbol] mode :export | :import
     # @param [String] session_name Name (usually the date_time_stamp) of the export session
