@@ -283,7 +283,6 @@ module Hbacker
       cond_result = HbaseTable.where(conditions)
       Hbacker.log.debug "Cond result rows: #{cond_result.inspect}"
       results = cond_result.all.select{|table| table.hbacker_session.dest_root == dest_root }.collect do |t|
-        t.reload
         t[:table_name]
       end
     end
@@ -292,7 +291,6 @@ module Hbacker
       cond_result = HbaseTable.where(:table_name => table_name)
       Hbacker.log.debug "Cond result rows: #{cond_result.inspect}"
       results = cond_result.collect do |t|
-        t.reload
         t[:table_name]
       end
       results.include? table_name
